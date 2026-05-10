@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --background: #fafafa;
+  --foreground: #18181b;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+@layer components {
+  /* Glassmorphism effects */
+  .glass {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20 shadow-glass;
+  }
+
+  .glass-sm {
+    @apply bg-white/70 backdrop-blur-lg border border-white/30 shadow-glass-sm;
+  }
+
+  /* Button variants */
+  .btn-primary {
+    @apply bg-gray-900 text-white hover:bg-gray-800 active:bg-gray-950 
+           px-4 py-2 rounded-lg font-medium text-sm
+           transition-all duration-150 ease-out
+           focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-gray-900 border border-gray-200 
+           hover:bg-gray-50 active:bg-gray-100
+           px-4 py-2 rounded-lg font-medium text-sm
+           transition-all duration-150 ease-out
+           focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-2;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 active:bg-red-800
+           px-4 py-2 rounded-lg font-medium text-sm
+           transition-all duration-150 ease-out
+           focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2;
+  }
+
+  .btn-ghost {
+    @apply text-gray-600 hover:text-gray-900 hover:bg-gray-100
+           px-3 py-2 rounded-lg font-medium text-sm
+           transition-all duration-150 ease-out;
+  }
+
+  /* Input styles */
+  .input {
+    @apply w-full px-3 py-2 rounded-lg border border-gray-200
+           bg-white text-gray-900 text-sm
+           placeholder:text-gray-400
+           focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300
+           transition-all duration-150;
+  }
+
+  .input-error {
+    @apply border-red-300 focus:ring-red-500/20 focus:border-red-500;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-xl border border-gray-100 shadow-card
+           transition-all duration-200;
+  }
+
+  .card-hover {
+    @apply hover:shadow-card-hover hover:border-gray-200;
+  }
+
+  /* Table styles */
+  .table-container {
+    @apply w-full overflow-hidden rounded-xl border border-gray-100;
+  }
+
+  .table {
+    @apply w-full text-sm;
+  }
+
+  .table th {
+    @apply px-4 py-3 text-left font-medium text-gray-500 bg-gray-50/80 
+           border-b border-gray-100;
+  }
+
+  .table td {
+    @apply px-4 py-3 border-b border-gray-50;
+  }
+
+  .table tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .table tr:hover td {
+    @apply bg-gray-50/50;
+  }
+
+  /* Badge styles */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-gray {
+    @apply bg-gray-100 text-gray-700;
+  }
+
+  .badge-blue {
+    @apply bg-blue-50 text-blue-700;
+  }
+
+  .badge-green {
+    @apply bg-green-50 text-green-700;
+  }
+
+  .badge-yellow {
+    @apply bg-yellow-50 text-yellow-700;
+  }
+
+  .badge-red {
+    @apply bg-red-50 text-red-700;
+  }
+
+  .badge-purple {
+    @apply bg-purple-50 text-purple-700;
+  }
+
+  /* Sidebar styles */
+  .sidebar {
+    @apply fixed left-0 top-0 h-full bg-white border-r border-gray-100
+           transition-all duration-300 ease-out z-40;
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm
+           text-gray-600 hover:text-gray-900 hover:bg-gray-100
+           transition-all duration-150;
+  }
+
+  .sidebar-item-active {
+    @apply bg-gray-100 text-gray-900 font-medium;
+  }
+
+  /* Status colors */
+  .status-draft { @apply bg-gray-100 text-gray-700; }
+  .status-review { @apply bg-yellow-50 text-yellow-700; }
+  .status-ready { @apply bg-blue-50 text-blue-700; }
+  .status-submitted { @apply bg-indigo-50 text-indigo-700; }
+  .status-processing { @apply bg-purple-50 text-purple-700; }
+  .status-approved { @apply bg-green-50 text-green-700; }
+  .status-rejected { @apply bg-red-50 text-red-700; }
+  .status-delivered { @apply bg-emerald-50 text-emerald-700; }
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+/* Focus visible */
+*:focus-visible {
+  @apply outline-none ring-2 ring-gray-900/10;
+}
+
+/* Selection */
+::selection {
+  @apply bg-gray-900/10;
+}

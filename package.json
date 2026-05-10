@@ -1,0 +1,24 @@
+{
+  "name": "entrypilot",
+  "version": "1.0.0",
+  "description": "Multi-tenant SaaS visa processing management platform",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "setup": "./setup.sh",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "db:push": "cd backend && npm run db:push",
+    "db:seed": "cd backend && npm run db:seed",
+    "db:studio": "cd backend && npm run db:studio"
+  },
+  "keywords": ["visa", "saas", "processing", "travel", "immigration"],
+  "author": "",
+  "license": "MIT"
+}
