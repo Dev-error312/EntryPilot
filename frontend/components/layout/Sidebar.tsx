@@ -18,7 +18,6 @@ import {
   ChevronRight,
   Building2,
   LogOut,
-  Plane,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import clsx from 'clsx';
@@ -73,8 +72,8 @@ export default function Sidebar() {
         {/* Logo */}
         <div className="h-16 flex items-center px-4 border-b border-gray-100">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-slate-900 flex items-center justify-center">
-              <Plane className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 rounded flex items-center justify-center">
+              <img src="/logo.png" alt="EntryPilot Logo" width={20} height={20} className="w-5 h-5" />
             </div>
             <AnimatePresence>
               {!collapsed && (
@@ -84,7 +83,7 @@ export default function Sidebar() {
                   exit={{ opacity: 0, width: 0 }}
                   className="font-semibold text-gray-900 whitespace-nowrap overflow-hidden"
                 >
-                  VisaFlow
+                  EntryPilot
                 </motion.span>
               )}
             </AnimatePresence>
