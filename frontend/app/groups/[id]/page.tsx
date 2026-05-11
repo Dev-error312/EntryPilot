@@ -43,9 +43,17 @@ interface Applicant {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
-  phone: string;
-  passport: string;
+  email: string | null;
+  phone: string | null;
+  passportNumber: string | null;
+  nationality: string | null;
+  applications: Array<{
+    id: string;
+    referenceNumber: string;
+    status: string;
+    visaType: string;
+    destinationCountry: string;
+  }>;
 }
 
 export default function GroupDetailPage() {
@@ -74,7 +82,8 @@ export default function GroupDetailPage() {
       // Load applicants for this group
       try {
         const appResponse = await applicantsApi.listByGroup(groupId);
-        setApplicants(appResponse.data.data || []);
+        console.log('Applicants response:', appResponse.data);
+        setApplicants(appResponse.data.applicants || []);
       } catch (err) {
         console.error('Failed to load applicants:', err);
       }
@@ -295,10 +304,10 @@ export default function GroupDetailPage() {
                       <td className="py-3 px-4 text-gray-900">
                         {applicant.firstName} {applicant.lastName}
                       </td>
-                      <td className="py-3 px-4 text-gray-600">{applicant.email}</td>
-                      <td className="py-3 px-4 text-gray-600">{applicant.phone}</td>
+                      <td className="py-3 px-4 text-gray-600">{applicant.email || '-'}</td>
+                      <td className="py-3 px-4 text-gray-600">{applicant.phone || '-'}</td>
                       <td className="py-3 px-4 font-mono text-sm text-gray-600">
-                        {applicant.passport}
+                        {applicant.passportNumber || '-'}
                       </td>
                       <td className="py-3 px-4 text-center">
                         <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
