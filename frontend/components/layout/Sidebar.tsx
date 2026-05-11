@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -70,8 +71,15 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-gray-100">
         <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-gray-900 flex items-center justify-center">
-            <span className="text-white font-bold text-lg">V</span>
+          <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">
+            <Image
+              src="/logo.png"
+              alt="EntryPilot Logo"
+              width={36}
+              height={36}
+              className="w-9 h-9 object-contain"
+              priority
+            />
           </div>
           <AnimatePresence>
             {!collapsed && (

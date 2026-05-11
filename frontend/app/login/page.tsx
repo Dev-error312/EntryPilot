@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -62,8 +63,15 @@ export default function LoginPage() {
         >
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center">
-              <span className="text-white font-bold text-xl">V</span>
+            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+              <Image
+                src="/logo.png"
+                alt="EntryPilot Logo"
+                width={40}
+                height={40}
+                className="w-10 h-10 object-contain"
+                priority
+              />
             </div>
             <span className="text-xl font-semibold text-gray-900">EntryPilot</span>
           </div>

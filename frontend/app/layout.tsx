@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: 'EntryPilot - Visa Processing Management',
   description: 'Multi-tenant SaaS visa processing management platform',
   icons: {
-    icon: '/favicon.svg',
+    icon: '/logo.png',
   },
 }
 
