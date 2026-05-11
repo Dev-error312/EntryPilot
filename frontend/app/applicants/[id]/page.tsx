@@ -11,6 +11,7 @@ import {
   FileText,
   Globe,
   CreditCard,
+  User,
   Edit,
   Trash2,
 } from 'lucide-react';
@@ -188,7 +189,8 @@ export default function ApplicantDetailPage() {
 
             {applicant.gender && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
+                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                  <User className="w-4 h-4" />
                   Gender
                 </label>
                 <p className="text-lg text-gray-900">{applicant.gender}</p>
@@ -231,7 +233,8 @@ export default function ApplicantDetailPage() {
 
             {applicant.address && (
               <div className="lg:col-span-2">
-                <label className="block text-sm font-medium text-gray-600 mb-1">
+                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
                   Address
                 </label>
                 <p className="text-gray-900">{applicant.address}</p>
@@ -240,7 +243,8 @@ export default function ApplicantDetailPage() {
 
             {applicant.city && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
+                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
                   City
                 </label>
                 <p className="text-gray-900">{applicant.city}</p>
@@ -249,7 +253,8 @@ export default function ApplicantDetailPage() {
 
             {applicant.country && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
+                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
                   Country
                 </label>
                 <p className="text-gray-900">{applicant.country}</p>
@@ -266,14 +271,15 @@ export default function ApplicantDetailPage() {
           className="card p-6"
         >
           <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-            <CreditCard className="w-5 h-5" />
+            <CreditCard className="w-4 h-4" />
             Passport Information
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {applicant.passportNumber && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
+                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" />
                   Passport Number
                 </label>
                 <p className="text-lg font-mono text-gray-900">
@@ -284,7 +290,8 @@ export default function ApplicantDetailPage() {
 
             {applicant.passportIssue && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
+                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
                   Issue Date
                 </label>
                 <p className="text-lg text-gray-900">
@@ -295,7 +302,8 @@ export default function ApplicantDetailPage() {
 
             {applicant.passportExpiry && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
+                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
                   Expiry Date
                 </label>
                 <p className="text-lg text-gray-900">
@@ -313,17 +321,26 @@ export default function ApplicantDetailPage() {
           transition={{ delay: 0.2 }}
           className="card p-6"
         >
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+            <FileText className="w-4 h-4" />
             Group Information
           </h2>
 
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-            <p className="text-sm text-blue-700 mb-2">
-              <span className="font-medium">Code:</span> {applicant.group.code}
-            </p>
-            <p className="text-sm text-blue-700">
-              <span className="font-medium">Name:</span> {applicant.group.name}
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Group Code
+              </label>
+              <p className="text-lg font-mono text-gray-900">{applicant.group.code}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Group Name
+              </label>
+              <p className="text-lg text-gray-900">{applicant.group.name}</p>
+            </div>
           </div>
         </motion.div>
 
@@ -335,7 +352,8 @@ export default function ApplicantDetailPage() {
             transition={{ delay: 0.3 }}
             className="card p-6"
           >
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+              <FileText className="w-4 h-4" />
               Applications ({applicant.applications.length})
             </h2>
 

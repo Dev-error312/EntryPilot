@@ -168,14 +168,16 @@ export default function GroupDetailPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
+              <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
                 Group Code
               </label>
               <p className="text-lg font-mono text-gray-900">{group.code}</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
+              <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
                 Group Name
               </label>
               <p className="text-lg text-gray-900">{group.name}</p>
@@ -195,7 +197,8 @@ export default function GroupDetailPage() {
 
             {group.externalAgent && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
+                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                  <User className="w-4 h-4" />
                   External Agent
                 </label>
                 <p className="text-lg text-gray-900">{group.externalAgent}</p>
@@ -204,27 +207,23 @@ export default function GroupDetailPage() {
 
             {group.assignedEmployee && (
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
+                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                   <User className="w-4 h-4" />
                   Assigned Employee
                 </label>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="font-medium text-gray-900">
-                    {group.assignedEmployee.firstName} {group.assignedEmployee.lastName}
-                  </p>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                    <span className="flex items-center gap-1">
-                      <Mail className="w-4 h-4" />
-                      {group.assignedEmployee.email}
-                    </span>
-                  </div>
-                </div>
+                <p className="text-lg text-gray-900">
+                  {group.assignedEmployee.firstName} {group.assignedEmployee.lastName}
+                </p>
+                <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+                  <Mail className="w-4 h-4" />
+                  {group.assignedEmployee.email}
+                </p>
               </div>
             )}
 
             {group.notes && (
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
+                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                   <FileText className="w-4 h-4" />
                   Notes
                 </label>
@@ -233,7 +232,8 @@ export default function GroupDetailPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
+              <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <Archive className="w-4 h-4" />
                 Status
               </label>
               <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
@@ -246,7 +246,8 @@ export default function GroupDetailPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
+              <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
                 Created
               </label>
               <p className="text-gray-900">
@@ -265,7 +266,7 @@ export default function GroupDetailPage() {
         >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <Users className="w-5 h-5" />
+              <Users className="w-4 h-4" />
               Applicants ({group._count.applicants})
             </h2>
             <button className="btn-primary">

@@ -231,76 +231,88 @@ export default function ApplicantsPage() {
                           </p>
                         </div>
                       ) : (
-                        <div className="border-t border-gray-100">
-                          <table className="table">
+                        <div className="border-t border-gray-100 overflow-x-auto">
+                          <table className="w-full table-fixed">
+                            <colgroup>
+                              <col style={{ width: '25%' }} />
+                              <col style={{ width: '20%' }} />
+                              <col style={{ width: '20%' }} />
+                              <col style={{ width: '15%' }} />
+                              <col style={{ width: '10%' }} />
+                              <col style={{ width: '10%' }} />
+                            </colgroup>
                             <thead>
-                              <tr>
-                                <th>Name</th>
-                                <th>Passport</th>
-                                <th>Nationality</th>
-                                <th>Contact</th>
-                                <th>Applications</th>
-                                <th></th>
+                              <tr className="border-b border-gray-200 bg-gray-50">
+                                <th className="text-left py-3 px-4 font-medium text-gray-700">Name</th>
+                                <th className="text-left py-3 px-4 font-medium text-gray-700">Passport</th>
+                                <th className="text-left py-3 px-4 font-medium text-gray-700">Nationality</th>
+                                <th className="text-left py-3 px-4 font-medium text-gray-700">Contact</th>
+                                <th className="text-center py-3 px-4 font-medium text-gray-700">Apps</th>
+                                <th className="text-center py-3 px-4 font-medium text-gray-700">Actions</th>
                               </tr>
                             </thead>
                             <tbody>
                               {group.applicants.map((applicant) => (
-                                <tr key={applicant.id}>
-                                  <td>
+                                <tr
+                                  key={applicant.id}
+                                  className="border-b border-gray-100 hover:bg-gray-50"
+                                >
+                                  <td className="py-3 px-4 truncate">
                                     <Link
                                       href={`/applicants/${applicant.id}`}
                                       className="font-medium text-gray-900 
-                                               hover:text-gray-600"
+                                               hover:text-blue-600"
                                     >
                                       {applicant.firstName} {applicant.lastName}
                                     </Link>
                                   </td>
-                                  <td>
-                                    <span className="font-mono text-sm text-gray-600">
-                                      {applicant.passportNumber || '-'}
-                                    </span>
+                                  <td className="py-3 px-4 font-mono text-sm text-gray-600 truncate">
+                                    {applicant.passportNumber || '-'}
                                   </td>
-                                  <td>
+                                  <td className="py-3 px-4 truncate">
                                     {applicant.nationality ? (
                                       <span className="flex items-center gap-1.5">
-                                        <Globe className="w-4 h-4 text-gray-400" />
-                                        {applicant.nationality}
+                                        <Globe className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                                        <span className="truncate">{applicant.nationality}</span>
                                       </span>
                                     ) : (
-                                      '-'
+                                      <span className="text-gray-400">-</span>
                                     )}
                                   </td>
-                                  <td>
+                                  <td className="py-3 px-4">
                                     <div className="flex items-center gap-2">
                                       {applicant.email && (
                                         <a
                                           href={`mailto:${applicant.email}`}
-                                          className="p-1 rounded hover:bg-gray-100"
+                                          className="p-1 rounded hover:bg-gray-200 transition-colors flex-shrink-0"
                                           title={applicant.email}
                                         >
-                                          <Mail className="w-4 h-4 text-gray-400" />
+                                          <Mail className="w-4 h-4 text-gray-400 hover:text-gray-600" />
                                         </a>
                                       )}
                                       {applicant.phone && (
                                         <a
                                           href={`tel:${applicant.phone}`}
-                                          className="p-1 rounded hover:bg-gray-100"
+                                          className="p-1 rounded hover:bg-gray-200 transition-colors flex-shrink-0"
                                           title={applicant.phone}
                                         >
-                                          <Phone className="w-4 h-4 text-gray-400" />
+                                          <Phone className="w-4 h-4 text-gray-400 hover:text-gray-600" />
                                         </a>
+                                      )}
+                                      {!applicant.email && !applicant.phone && (
+                                        <span className="text-gray-400">-</span>
                                       )}
                                     </div>
                                   </td>
-                                  <td>
-                                    <span className="badge badge-gray">
+                                  <td className="py-3 px-4 text-center">
+                                    <span className="inline-block px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
                                       {applicant._count.applications}
                                     </span>
                                   </td>
-                                  <td>
+                                  <td className="py-3 px-4 text-center">
                                     <Link
                                       href={`/applicants/${applicant.id}`}
-                                      className="btn-ghost text-sm"
+                                      className="text-blue-600 hover:text-blue-800 font-medium text-sm"
                                     >
                                       View
                                     </Link>
