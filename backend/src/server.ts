@@ -13,6 +13,7 @@ import { templateRoutes } from './modules/templates/template.routes';
 import { importRoutes } from './modules/imports/import.routes';
 import { auditRoutes } from './modules/audit/audit.routes';
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes';
+import { templateRoutes as importTemplateRoutes } from './modules/imports/template.routes';
 import { authMiddleware } from './middleware/auth.middleware';
 import { tenantMiddleware } from './middleware/tenant.middleware';
 
@@ -30,7 +31,7 @@ async function bootstrap() {
   });
 
   await server.register(jwt, {
-    secret: process.env.JWT_SECRET || 'entrypilot-super-secret-key-2024'
+    secret: process.env.JWT_SECRET || 'visaflow-super-secret-key-2024'
   });
 
   await server.register(multipart, {
@@ -60,13 +61,14 @@ async function bootstrap() {
   await server.register(applicationRoutes, { prefix: '/api/applications' });
   await server.register(templateRoutes, { prefix: '/api/templates' });
   await server.register(importRoutes, { prefix: '/api/imports' });
+  await server.register(importTemplateRoutes, { prefix: '/api/imports/templates' });
   await server.register(auditRoutes, { prefix: '/api/audit' });
   await server.register(dashboardRoutes, { prefix: '/api/dashboard' });
 
   // Start server
   try {
     const address = await server.listen({ port: 4000, host: '0.0.0.0' });
-    console.log(`🚀 EntryPilot API running at ${address}`);
+    console.log(`🚀 VisaFlow API running at ${address}`);
   } catch (err) {
     server.log.error(err);
     process.exit(1);

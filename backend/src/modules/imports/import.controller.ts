@@ -2,6 +2,16 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs/promises';
+import * as XLSX from 'xlsx';
+import {
+  parseExcelData,
+  parsePDFText,
+  parseOCRText,
+  validateApplicantData,
+  transformToApplicant,
+  ParseResult
+} from './china-visa-parser';
+import { CHINA_VISA_FIELDS } from './china-visa-fields';
 
 // Ensure uploads directory exists
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
@@ -22,14 +32,6 @@ export class ImportController {
       const user = (request as any).user;
       const orgId = (request as any).organizationId;
 
-      // Only admins can upload
-      if (user.role === 'AGENCY_EMPLOYEE') {
-        return reply.status(403).send({ 
-          error: 'Forbidden', 
-          message: 'Only admins can import files' 
-        });
-      }
-
       await this.ensureUploadsDir();
 
       const data = await request.file();
@@ -42,18 +44,19 @@ export class ImportController {
       }
 
       const allowedTypes = [
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
-        'application/vnd.ms-excel', // xls
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel',
         'text/csv',
         'application/pdf',
         'image/jpeg',
-        'image/png'
+        'image/png',
+        'image/jpg',
       ];
 
       if (!allowedTypes.includes(data.mimetype)) {
         return reply.status(400).send({ 
           error: 'Bad Request', 
-          message: 'Invalid file type. Supported: Excel, CSV, PDF, Images' 
+          message: 'Invalid file type. Supported: Excel (.xlsx, .xls), CSV, PDF, Images (JPG, PNG)' 
         });
       }
 
@@ -83,28 +86,13 @@ export class ImportController {
         }
       });
 
-      // Audit log
-      await this.server.prisma.auditLog.create({
-        data: {
-          action: 'UPLOAD_IMPORT',
-          entityType: 'Import',
-          entityId: importRecord.id,
-          newValues: { 
-            fileName: data.filename,
-            fileType: data.mimetype
-          },
-          userId: user.id,
-          organizationId: orgId
-        }
-      });
-
       return reply.status(201).send({
         id: importRecord.id,
         fileName: importRecord.fileName,
         fileType: importRecord.fileType,
         fileSize: importRecord.fileSize,
         status: importRecord.status,
-        message: 'File uploaded successfully. Call /process to extract data.'
+        message: 'File uploaded successfully. Click Process to extract data.'
       });
     } catch (error: any) {
       return reply.status(500).send({ 
@@ -194,7 +182,7 @@ export class ImportController {
       if (importRecord.status !== 'PENDING') {
         return reply.status(400).send({ 
           error: 'Bad Request', 
-          message: 'Import already processed' 
+          message: 'Import already processed or in progress' 
         });
       }
 
@@ -206,44 +194,62 @@ export class ImportController {
 
       // Process file based on type
       const filePath = path.join(UPLOADS_DIR, importRecord.filePath);
-      let extractedData: any[] = [];
+      let parseResult: ParseResult;
 
       try {
         if (importRecord.fileType === 'text/csv') {
-          extractedData = await this.processCSV(filePath);
+          parseResult = await this.processCSV(filePath);
         } else if (importRecord.fileType.includes('spreadsheet') || importRecord.fileType.includes('excel')) {
-          extractedData = await this.processExcel(filePath);
+          parseResult = await this.processExcel(filePath);
         } else if (importRecord.fileType === 'application/pdf') {
-          extractedData = await this.processPDF(filePath);
+          parseResult = await this.processPDF(filePath);
         } else if (importRecord.fileType.startsWith('image/')) {
-          extractedData = await this.processImage(filePath);
+          parseResult = await this.processImage(filePath);
+        } else {
+          throw new Error('Unsupported file type');
         }
 
-        // Update import record with results
-        const updated = await this.server.prisma.import.update({
-          where: { id },
-          data: {
-            status: extractedData.length > 0 ? 'COMPLETED' : 'FAILED',
-            totalCount: extractedData.length,
-            processedCount: extractedData.length,
-            metadata: { extractedData }
-          }
-        });
-
-        // If groupId provided, create applicants
-        if (importRecord.groupId && extractedData.length > 0) {
-          await this.createApplicantsFromImport(
-            extractedData,
+        // Create applicants if groupId provided and we have valid data
+        if (importRecord.groupId && parseResult.applicants.length > 0) {
+          const validApplicants = parseResult.applicants.filter(a => a.missingRequired.length === 0);
+          const createdCount = await this.createApplicantsFromImport(
+            validApplicants,
             importRecord.groupId,
             orgId,
             user.id
           );
+          parseResult.successCount = createdCount;
         }
 
+        // Update import record with results
+        await this.server.prisma.import.update({
+          where: { id },
+          data: {
+            status: parseResult.errorCount > 0 && parseResult.successCount > 0 
+              ? 'PARTIAL' 
+              : parseResult.successCount > 0 
+                ? 'COMPLETED' 
+                : 'FAILED',
+            totalCount: parseResult.totalProcessed,
+            processedCount: parseResult.successCount,
+            errorCount: parseResult.errorCount,
+            errors: parseResult.warnings.length > 0 ? { warnings: parseResult.warnings } : undefined,
+            metadata: { 
+              applicants: JSON.stringify(parseResult.applicants),
+              parsedAt: new Date().toISOString()
+            } as any
+          }
+        });
+
         return reply.send({
-          message: 'Import processed successfully',
-          totalRecords: extractedData.length,
-          applicants: extractedData
+          message: parseResult.successCount > 0 
+            ? `Successfully processed ${parseResult.successCount} applicant(s)` 
+            : 'Processing completed with errors',
+          ...parseResult,
+          applicants: parseResult.applicants.map(a => ({
+            ...a,
+            validation: validateApplicantData(a.data)
+          }))
         });
       } catch (processError: any) {
         await this.server.prisma.import.update({
@@ -283,14 +289,47 @@ export class ImportController {
         });
       }
 
+      // Parse metadata to get applicants
+      let applicants: any[] = [];
+      let parsedAt = new Date().toISOString();
+      try {
+        if (importRecord.metadata) {
+          const meta = typeof importRecord.metadata === 'string' 
+            ? JSON.parse(importRecord.metadata) 
+            : importRecord.metadata;
+          
+          if (meta?.applicants) {
+            if (typeof meta.applicants === 'string') {
+              applicants = JSON.parse(meta.applicants);
+            } else if (Array.isArray(meta.applicants)) {
+              applicants = meta.applicants;
+            }
+          }
+          if (meta?.parsedAt) {
+            parsedAt = meta.parsedAt;
+          }
+        }
+      } catch (parseErr) {
+        console.error('Error parsing metadata:', parseErr);
+        applicants = [];
+      }
+
+      // Extract warnings from errors
+      const warnings = Array.isArray((importRecord.errors as any)?.warnings) 
+        ? (importRecord.errors as any).warnings 
+        : [];
+
       return reply.send({
-        id: importRecord.id,
-        status: importRecord.status,
-        totalCount: importRecord.totalCount,
-        processedCount: importRecord.processedCount,
-        errorCount: importRecord.errorCount,
-        errors: importRecord.errors,
-        data: importRecord.metadata
+        data: {
+          id: importRecord.id,
+          status: importRecord.status,
+          totalCount: importRecord.totalCount,
+          processedCount: importRecord.processedCount,
+          errorCount: importRecord.errorCount,
+          warnings: warnings,
+          applicants: applicants || [],
+          errors: importRecord.errors
+        }
       });
     } catch (error: any) {
       return reply.status(500).send({ 
@@ -300,184 +339,204 @@ export class ImportController {
     }
   };
 
-  private async processCSV(filePath: string): Promise<any[]> {
+  getFields = async (request: FastifyRequest, reply: FastifyReply) => {
+    // Return field definitions for frontend
+    return reply.send({
+      fields: CHINA_VISA_FIELDS,
+      sections: [
+        { id: 'personal', name: 'Personal Information' },
+        { id: 'passport', name: 'Passport Information' },
+        { id: 'occupation', name: 'Occupation' },
+        { id: 'contact', name: 'Contact Information' },
+        { id: 'emergency', name: 'Emergency Contact' },
+        { id: 'visa', name: 'Visa Information' },
+        { id: 'travel', name: 'Travel Details' },
+        { id: 'inviter', name: 'Inviting Party' },
+        { id: 'history', name: 'Travel History' },
+        { id: 'other', name: 'Other Information' },
+      ]
+    });
+  };
+
+  // ==================== FILE PROCESSORS ====================
+
+  private async processCSV(filePath: string): Promise<ParseResult> {
     const content = await fs.readFile(filePath, 'utf-8');
-    const lines = content.split('\n').filter(line => line.trim());
+    const lines = content.split('\n').map(l => l.trim()).filter(l => l);
     
-    if (lines.length < 2) return [];
+    if (lines.length < 2) {
+      return {
+        applicants: [],
+        totalProcessed: 0,
+        successCount: 0,
+        errorCount: 0,
+        warnings: ['CSV file is empty or has no data rows'],
+      };
+    }
 
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const results: any[] = [];
+    // Parse CSV into rows
+    const rows = lines.map(line => this.parseCSVLine(line));
+    return parseExcelData(rows);
+  }
 
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim());
-      const record: any = {};
+  private parseCSVLine(line: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
 
-      headers.forEach((header, index) => {
-        const value = values[index] || '';
-        this.mapField(header, value, record);
-      });
-
-      if (record.firstName || record.lastName) {
-        results.push({
-          ...record,
-          confidence: 95 // CSV is structured, high confidence
-        });
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
       }
     }
-
-    return results;
+    
+    result.push(current.trim());
+    return result;
   }
 
-  private async processExcel(filePath: string): Promise<any[]> {
-    // For MVP, we'll use a simple approach
-    // In production, use xlsx library
+  private async processExcel(filePath: string): Promise<ParseResult> {
     try {
-      const { exec } = require('child_process');
-      const { promisify } = require('util');
-      const execAsync = promisify(exec);
+      // Read the Excel file using xlsx
+      const workbook = XLSX.readFile(filePath);
+      
+      // Get the first sheet
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      
+      // Convert to array of arrays
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      
+      if (rows.length < 2) {
+        return {
+          applicants: [],
+          totalProcessed: 0,
+          successCount: 0,
+          errorCount: 0,
+          warnings: ['Excel file is empty or has no data rows'],
+        };
+      }
 
-      // Convert to CSV and process
-      const csvPath = filePath + '.csv';
-      // This is a placeholder - in real implementation use xlsx library
-      return [];
-    } catch {
-      throw new Error('Excel processing failed');
+      return parseExcelData(rows);
+    } catch (error: any) {
+      return {
+        applicants: [],
+        totalProcessed: 0,
+        successCount: 0,
+        errorCount: 1,
+        warnings: [`Excel parsing error: ${error.message}`],
+      };
     }
   }
 
-  private async processPDF(filePath: string): Promise<any[]> {
+  private async processPDF(filePath: string): Promise<ParseResult> {
     try {
       const pdfParse = require('pdf-parse');
       const buffer = await fs.readFile(filePath);
       const data = await pdfParse(buffer);
-
-      // Extract structured data from PDF text
-      const text = data.text;
-      const applicants = this.extractApplicantData(text);
-
-      return applicants.map(a => ({
-        ...a,
-        confidence: 70 // PDF extraction is less reliable
-      }));
-    } catch {
-      throw new Error('PDF processing failed');
+      
+      return parsePDFText(data.text);
+    } catch (error: any) {
+      return {
+        applicants: [],
+        totalProcessed: 0,
+        successCount: 0,
+        errorCount: 1,
+        warnings: [`PDF parsing error: ${error.message}`],
+      };
     }
   }
 
-  private async processImage(filePath: string): Promise<any[]> {
+  private async processImage(filePath: string): Promise<ParseResult> {
     try {
-      // In production, use Tesseract.js or OpenAI Vision
-      // For MVP, return placeholder
-      const confidence = 60;
+      // Use Tesseract.js for OCR
+      const { createWorker } = require('tesseract.js');
+      const worker = await createWorker('eng');
       
-      return [{
-        firstName: 'OCR',
-        lastName: 'Required',
-        confidence,
-        note: 'Image OCR requires Tesseract.js or AI Vision integration'
-      }];
-    } catch {
-      throw new Error('Image OCR processing failed');
-    }
-  }
-
-  private mapField(header: string, value: string, record: any) {
-    const fieldMap: Record<string, string> = {
-      'first name': 'firstName',
-      'firstname': 'firstName',
-      'fname': 'firstName',
-      'last name': 'lastName',
-      'lastname': 'lastName',
-      'lname': 'lastName',
-      'surname': 'lastName',
-      'email': 'email',
-      'e-mail': 'email',
-      'phone': 'phone',
-      'mobile': 'phone',
-      'telephone': 'phone',
-      'date of birth': 'dob',
-      'dob': 'dob',
-      'birth date': 'dob',
-      'gender': 'gender',
-      'sex': 'gender',
-      'nationality': 'nationality',
-      'country': 'country',
-      'passport': 'passportNumber',
-      'passport number': 'passportNumber',
-      'passport no': 'passportNumber',
-      'address': 'address',
-      'city': 'city'
-    };
-
-    const mappedField = fieldMap[header];
-    if (mappedField && value) {
-      record[mappedField] = value;
-    }
-  }
-
-  private extractApplicantData(text: string): any[] {
-    // Basic regex extraction for common form patterns
-    const applicants: any[] = [];
-    
-    // This is a simplified extraction - production would use more sophisticated parsing
-    const lines = text.split('\n');
-    const currentApplicant: any = {};
-
-    lines.forEach(line => {
-      const lower = line.toLowerCase();
+      const { data: { text } } = await worker.recognize(filePath);
+      await worker.terminate();
       
-      if (lower.includes('first name') || lower.includes('given name')) {
-        const match = line.match(/:\s*(.+)/);
-        if (match) currentApplicant.firstName = match[1].trim();
-      }
-      if (lower.includes('last name') || lower.includes('surname')) {
-        const match = line.match(/:\s*(.+)/);
-        if (match) currentApplicant.lastName = match[1].trim();
-      }
-      if (lower.includes('passport')) {
-        const match = line.match(/:\s*([A-Z0-9]+)/);
-        if (match) currentApplicant.passportNumber = match[1].trim();
-      }
-    });
-
-    if (currentApplicant.firstName || currentApplicant.lastName) {
-      applicants.push(currentApplicant);
+      return parseOCRText(text);
+    } catch (error: any) {
+      return {
+        applicants: [],
+        totalProcessed: 0,
+        successCount: 0,
+        errorCount: 1,
+        warnings: [`OCR error: ${error.message}`],
+      };
     }
-
-    return applicants;
   }
+
+  // ==================== CREATE APPLICANTS ====================
 
   private async createApplicantsFromImport(
-    data: any[],
+    parsedApplicants: any[],
     groupId: string,
     orgId: string,
     userId: string
-  ) {
-    for (const record of data) {
-      if (!record.firstName && !record.lastName) continue;
+  ): Promise<number> {
+    let createdCount = 0;
 
-      await this.server.prisma.applicant.create({
-        data: {
-          firstName: record.firstName || 'Unknown',
-          lastName: record.lastName || 'Unknown',
-          email: record.email,
-          phone: record.phone,
-          dob: record.dob ? new Date(record.dob) : null,
-          gender: record.gender,
-          nationality: record.nationality,
-          passportNumber: record.passportNumber,
-          address: record.address,
-          city: record.city,
-          country: record.country,
-          groupId,
-          organizationId: orgId,
-          documents: { 
-            importConfidence: record.confidence,
-            importNote: record.note 
-          }
+    for (const parsed of parsedApplicants) {
+      try {
+        const applicantData = transformToApplicant(parsed.data, groupId);
+
+        // Skip if no name
+        if (!applicantData.firstName && !applicantData.lastName) {
+          continue;
         }
-      });
+
+        await this.server.prisma.$transaction(async (tx) => {
+          const applicant = await tx.applicant.create({
+            data: {
+              firstName: applicantData.firstName || 'Unknown',
+              lastName: applicantData.lastName || 'Unknown',
+              email: applicantData.email,
+              phone: applicantData.phone,
+              dob: applicantData.dob ? new Date(applicantData.dob) : null,
+              gender: applicantData.gender,
+              nationality: applicantData.nationality,
+              passportNumber: applicantData.passportNumber,
+              passportIssue: applicantData.passportIssue ? new Date(applicantData.passportIssue) : null,
+              passportExpiry: applicantData.passportExpiry ? new Date(applicantData.passportExpiry) : null,
+              address: applicantData.address,
+              groupId,
+              organizationId: orgId,
+              documents: applicantData.documents,
+            }
+          });
+
+          // Create audit log
+          await tx.auditLog.create({
+            data: {
+              action: 'IMPORT_APPLICANT',
+              entityType: 'Applicant',
+              entityId: applicant.id,
+              newValues: {
+                name: `${applicant.firstName} ${applicant.lastName}`,
+                passport: applicant.passportNumber,
+                source: parsed.source,
+                confidence: parsed.confidence,
+              },
+              userId,
+              organizationId: orgId,
+            }
+          });
+
+          createdCount++;
+        });
+      } catch (error) {
+        console.error('Failed to create applicant:', error);
+      }
     }
+
+    return createdCount;
   }
 }
