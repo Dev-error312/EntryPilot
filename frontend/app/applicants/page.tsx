@@ -175,10 +175,10 @@ export default function ApplicantsPage() {
                 className="card overflow-hidden"
               >
                 {/* Group Header */}
-                <button
+                <div
                   onClick={() => toggleGroup(group.id)}
                   className="w-full p-4 flex items-center justify-between 
-                           hover:bg-gray-50 transition-colors text-left"
+                           hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     {expandedGroups.has(group.id) ? (
@@ -213,7 +213,7 @@ export default function ApplicantsPage() {
                       Add
                     </button>
                   </div>
-                </button>
+                </div>
 
                 {/* Applicants List */}
                 <AnimatePresence>
