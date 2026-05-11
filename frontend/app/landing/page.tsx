@@ -247,12 +247,12 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="hidden md:flex items-center gap-4">
-            <a href="#login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+            <a href="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
               Sign In
             </a>
-            <a href="#demo" className="bg-slate-900 text-white px-4 py-2 rounded text-sm font-medium hover:bg-slate-800 transition-all shadow-sm">
+            <button onClick={() => scrollToSection('contact')} className="bg-slate-900 text-white px-4 py-2 rounded text-sm font-medium hover:bg-slate-800 transition-all shadow-sm cursor-pointer">
               Book Demo
-            </a>
+            </button>
           </div>
           
           {/* Mobile menu button */}
@@ -279,8 +279,8 @@ export default function LandingPage() {
             <button onClick={() => scrollToSection('faq')} className="block w-full text-left py-2 text-slate-600 hover:text-slate-900">FAQ</button>
             <button onClick={() => scrollToSection('contact')} className="block w-full text-left py-2 text-slate-600 hover:text-slate-900">Contact</button>
             <hr className="my-3" />
-            <a href="#login" className="block py-2 text-slate-600 hover:text-slate-900">Sign In</a>
-            <a href="#demo" className="block w-full bg-slate-900 text-white px-4 py-2 rounded text-center font-medium">Book Demo</a>
+            <a href="/login" className="block py-2 text-slate-600 hover:text-slate-900">Sign In</a>
+            <button onClick={() => scrollToSection('contact')} className="block w-full bg-slate-900 text-white px-4 py-2 rounded text-center font-medium cursor-pointer border-none">Book Demo</button>
           </motion.div>
         )}
       </nav>
