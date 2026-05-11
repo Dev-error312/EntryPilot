@@ -1044,8 +1044,8 @@ export default function LandingPage() {
               <h5 className="font-bold text-slate-900 mb-6 text-sm">Legal</h5>
               <ul className="space-y-3 text-sm text-slate-500">
                 <li><a href="/privacy" className="hover:text-blue-600">Privacy Policy</a></li>
-                <li><button onClick={() => scrollToSection('features')} className="hover:text-blue-600 bg-transparent border-none cursor-pointer p-0">Terms of Service</button></li>
-                <li><button onClick={() => scrollToSection('features')} className="hover:text-blue-600 bg-transparent border-none cursor-pointer p-0">Cookie Policy</button></li>
+                <li><a href="/terms" className="hover:text-blue-600">Terms of Service</a></li>
+                <li><a href="/cookies" className="hover:text-blue-600">Cookie Policy</a></li>
               </ul>
             </div>
           </div>

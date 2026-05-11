@@ -1,13 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import Link from 'next/link';
-import { Menu } from 'lucide-react';
+import PublicNavbar from '@/components/layout/PublicNavbar';
+import PublicFooter from '@/components/layout/PublicFooter';
+import PageHeader from '@/components/layout/PageHeader';
 
 export default function PrivacyPolicyPage() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
@@ -171,83 +169,14 @@ export default function PrivacyPolicyPage() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 antialiased">
-      {/* Navbar */}
-      <nav className="fixed top-0 w-full z-50 bg-white/70 backdrop-blur-xl border-b border-slate-200/50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <div className="w-8 h-8 rounded flex items-center justify-center">
-                <img src="/logo.png" alt="EntryPilot Logo" width={32} height={32} className="w-8 h-8" />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-slate-900">EntryPilot</span>
-            </Link>
-            <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
-              <a href="/" className="hover:text-slate-900 transition-colors">Features</a>
-              <a href="/" className="hover:text-slate-900 transition-colors">Workflow</a>
-              <a href="/" className="hover:text-slate-900 transition-colors">Pricing</a>
-              <a href="/" className="hover:text-slate-900 transition-colors">Security</a>
-              <a href="/" className="hover:text-slate-900 transition-colors">FAQ</a>
-              <a href="/" className="hover:text-slate-900 transition-colors">Contact</a>
-            </div>
-          </div>
-          <div className="hidden md:flex items-center gap-4">
-            <a href="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
-              Sign In
-            </a>
-            <button onClick={() => scrollToSection('contact')} className="bg-slate-900 text-white px-4 py-2 rounded text-sm font-medium hover:bg-slate-800 transition-all shadow-sm cursor-pointer border-none">
-              Book Demo
-            </button>
-          </div>
-          
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 hover:bg-slate-100 rounded transition-colors"
-          >
-            <Menu className="w-6 h-6 text-slate-900" />
-          </button>
-        </div>
-
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-white border-b border-slate-200 px-6 py-4 space-y-3"
-          >
-            <a href="/" className="block w-full text-left py-2 text-slate-600 hover:text-slate-900">Features</a>
-            <a href="/" className="block w-full text-left py-2 text-slate-600 hover:text-slate-900">Workflow</a>
-            <a href="/" className="block w-full text-left py-2 text-slate-600 hover:text-slate-900">Pricing</a>
-            <a href="/" className="block w-full text-left py-2 text-slate-600 hover:text-slate-900">Security</a>
-            <a href="/" className="block w-full text-left py-2 text-slate-600 hover:text-slate-900">FAQ</a>
-            <a href="/" className="block w-full text-left py-2 text-slate-600 hover:text-slate-900">Contact</a>
-            <hr className="my-3" />
-            <a href="/login" className="block py-2 text-slate-600 hover:text-slate-900">Sign In</a>
-            <button onClick={() => scrollToSection('contact')} className="block w-full bg-slate-900 text-white px-4 py-2 rounded text-center font-medium cursor-pointer border-none">Book Demo</button>
-          </motion.div>
-        )}
-      </nav>
+      <PublicNavbar scrollToSection={scrollToSection} />
 
       {/* Main Content with top padding for fixed navbar */}
       <div className="pt-16">
-        {/* Header */}
-        <div className="bg-gradient-to-b from-slate-50 to-white border-b border-slate-100">
-          <div className="max-w-4xl mx-auto px-6 py-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
-                Privacy Policy
-              </h1>
-              <p className="text-lg text-slate-600">
-                How EntryPilot collects, uses, and protects your information.
-              </p>
-            </motion.div>
-          </div>
-        </div>
+        <PageHeader
+          title="Privacy Policy"
+          subtitle="How EntryPilot collects, uses, and protects your information."
+        />
 
         {/* Content */}
         <div className="max-w-4xl mx-auto px-6 py-16">
@@ -352,58 +281,7 @@ export default function PrivacyPolicyPage() {
       </div>
     </div>
 
-    {/* Footer */}
-    <footer className="bg-white border-t border-slate-100 pt-16 pb-8">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid md:grid-cols-4 gap-12 mb-16">
-          <div>
-            <Link href="/" className="flex items-center gap-2 mb-6 hover:opacity-80 transition-opacity">
-              <div className="w-6 h-6 rounded flex items-center justify-center">
-                <img src="/logo.png" alt="EntryPilot Logo" width={24} height={24} className="w-6 h-6" />
-              </div>
-              <span className="text-lg font-bold text-slate-900">EntryPilot</span>
-            </Link>
-            <p className="text-sm text-slate-500 leading-relaxed">
-              The modern standard for global visa processing operations.
-            </p>
-          </div>
-          <div>
-            <h5 className="font-bold text-slate-900 mb-6 text-sm">Product</h5>
-            <ul className="space-y-3 text-sm text-slate-500">
-              <li><a href="/" className="hover:text-blue-600">Features</a></li>
-              <li><a href="/" className="hover:text-blue-600">OCR Engine</a></li>
-              <li><a href="/" className="hover:text-blue-600">Security</a></li>
-              <li><a href="/" className="hover:text-blue-600">Pricing</a></li>
-            </ul>
-          </div>
-          <div>
-            <h5 className="font-bold text-slate-900 mb-6 text-sm">Company</h5>
-            <ul className="space-y-3 text-sm text-slate-500">
-              <li><a href="/" className="hover:text-blue-600">About Us</a></li>
-              <li><a href="/" className="hover:text-blue-600">Contact</a></li>
-              <li><a href="/" className="hover:text-blue-600">Careers</a></li>
-              <li><a href="/" className="hover:text-blue-600">Blog</a></li>
-            </ul>
-          </div>
-          <div>
-            <h5 className="font-bold text-slate-900 mb-6 text-sm">Legal</h5>
-            <ul className="space-y-3 text-sm text-slate-500">
-              <li><a href="/privacy" className="hover:text-blue-600">Privacy Policy</a></li>
-              <li><a href="/" className="hover:text-blue-600">Terms of Service</a></li>
-              <li><a href="/" className="hover:text-blue-600">Cookie Policy</a></li>
-            </ul>
-          </div>
-        </div>
-        <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-slate-50 text-[11px] text-slate-400 font-medium uppercase tracking-widest">
-          <div>© 2026 EntryPilot Systems Inc. All rights reserved.</div>
-          <div className="flex gap-6 mt-4 md:mt-0">
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate-900">Twitter</a>
-            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate-900">LinkedIn</a>
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate-900">GitHub</a>
-          </div>
-        </div>
-      </div>
-    </footer>
+    <PublicFooter />
     </div>
   );
 }
