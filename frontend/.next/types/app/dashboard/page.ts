@@ -1,4 +1,4 @@
-// File: /Users/karls/Downloads/workspace-019e116b-809a-7737-8287-0bb8a641243a/VisaPilot/frontend/app/dashboard/page.tsx
+// File: /Users/karls/Documents/EntryPilot/frontend/app/dashboard/page.tsx
 import * as entry from '../../../../app/dashboard/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
