@@ -379,17 +379,58 @@ function CreateApplicantModal({
     setError('');
 
     try {
-      const data = {
-        ...formData,
-        email: formData.email || undefined,
-        phone: formData.phone || undefined,
-        dob: formData.dob || undefined,
-        gender: formData.gender || undefined,
-        nationality: formData.nationality || undefined,
-        passportNumber: formData.passportNumber || undefined,
-        passportExpiry: formData.passportExpiry || undefined,
+      // Validate required fields
+      if (!formData.firstName.trim()) {
+        setError('First Name is required');
+        setLoading(false);
+        return;
+      }
+      if (!formData.lastName.trim()) {
+        setError('Last Name is required');
+        setLoading(false);
+        return;
+      }
+      if (!formData.groupId) {
+        setError('Group is required');
+        setLoading(false);
+        return;
+      }
+
+      // Build payload with proper date formatting
+      const data: any = {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        groupId: formData.groupId,
       };
+
+      // Add optional fields only if they have values
+      if (formData.email?.trim()) {
+        data.email = formData.email.trim();
+      }
+      if (formData.phone?.trim()) {
+        data.phone = formData.phone.trim();
+      }
+      if (formData.dob) {
+        // Convert date string to ISO datetime
+        data.dob = new Date(formData.dob).toISOString();
+      }
+      if (formData.gender) {
+        data.gender = formData.gender;
+      }
+      if (formData.nationality?.trim()) {
+        data.nationality = formData.nationality.trim();
+      }
+      if (formData.passportNumber?.trim()) {
+        data.passportNumber = formData.passportNumber.trim();
+      }
+      if (formData.passportExpiry) {
+        // Convert date string to ISO datetime
+        data.passportExpiry = new Date(formData.passportExpiry).toISOString();
+      }
+
+      console.log('Submitting applicant:', data);
       await applicantsApi.create(data);
+      
       setFormData({
         firstName: '',
         lastName: '',
@@ -404,7 +445,9 @@ function CreateApplicantModal({
       });
       onSuccess();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create applicant');
+      console.error('Create applicant error:', err.response?.data || err.message);
+      const errorMsg = err.response?.data?.message || err.response?.data?.details?.[0]?.message || 'Failed to create applicant';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

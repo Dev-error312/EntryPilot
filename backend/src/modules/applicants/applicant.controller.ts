@@ -2,9 +2,9 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 
 const createApplicantSchema = z.object({
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  email: z.string().email().optional(),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email format').optional(),
   phone: z.string().optional(),
   dob: z.string().datetime().optional(),
   gender: z.string().optional(),
@@ -16,7 +16,7 @@ const createApplicantSchema = z.object({
   city: z.string().optional(),
   country: z.string().optional(),
   notes: z.string().optional(),
-  groupId: z.string().min(1),
+  groupId: z.string().min(1, 'Group is required'),
   documents: z.any().optional()
 });
 
@@ -126,11 +126,14 @@ export class ApplicantController {
       return reply.status(201).send(applicant);
     } catch (error: any) {
       if (error.name === 'ZodError') {
+        const messages = error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
         return reply.status(400).send({ 
           error: 'Validation Error', 
+          message: messages,
           details: error.errors 
         });
       }
+      console.error('Applicant creation error:', error);
       return reply.status(500).send({ 
         error: 'Server Error', 
         message: error.message 
