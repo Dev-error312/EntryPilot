@@ -5,11 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   Bell,
-  ChevronDown,
   Command,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import clsx from 'clsx';
 
 interface NavbarProps {
   title?: string;
