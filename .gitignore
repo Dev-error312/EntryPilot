@@ -10,7 +10,13 @@ node_modules/
 /build
 /dist
 .next/
+.next/**
 out/
+
+# Cache
+.cache/
+.turbo/
+*.tsbuildinfo
 
 # Misc
 .DS_Store
