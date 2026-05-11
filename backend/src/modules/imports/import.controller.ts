@@ -162,6 +162,153 @@ export class ImportController {
     }
   };
 
+  // DELETE import and associated applicants
+  delete = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const user = (request as any).user;
+      const orgId = (request as any).organizationId;
+      const { id } = request.params as any;
+
+      const importRecord = await this.server.prisma.import.findFirst({
+        where: { id, organizationId: orgId }
+      });
+
+      if (!importRecord) {
+        return reply.status(404).send({ 
+          error: 'Not Found', 
+          message: 'Import not found' 
+        });
+      }
+
+      // Delete associated applicants that were created from this import
+      // We identify them by checking their documents.importId
+      await this.server.prisma.$transaction(async (tx) => {
+        // Find applicants created from this import
+        const applicantsToDelete = await tx.applicant.findMany({
+          where: {
+            organizationId: orgId,
+            groupId: importRecord.groupId || undefined,
+            documents: {
+              path: ['importId'],
+              equals: id
+            }
+          }
+        });
+
+        // Delete applications for these applicants
+        if (applicantsToDelete.length > 0) {
+          const applicantIds = applicantsToDelete.map(a => a.id);
+          
+          await tx.application.deleteMany({
+            where: {
+              applicantId: { in: applicantIds },
+              organizationId: orgId
+            }
+          });
+
+          await tx.applicant.deleteMany({
+            where: {
+              id: { in: applicantIds },
+              organizationId: orgId
+            }
+          });
+        }
+
+        // Delete the import file
+        try {
+          const filePath = path.join(UPLOADS_DIR, importRecord.filePath);
+          await fs.unlink(filePath);
+        } catch (e) {
+          console.log('File already deleted or not found');
+        }
+
+        // Delete the import record
+        await tx.import.delete({
+          where: { id }
+        });
+
+        // Audit log
+        await tx.auditLog.create({
+          data: {
+            action: 'DELETE_IMPORT',
+            entityType: 'Import',
+            entityId: id,
+            oldValues: {
+              fileName: importRecord.fileName,
+              processedCount: importRecord.processedCount
+            },
+            userId: user.id,
+            organizationId: orgId
+          }
+        });
+      });
+
+      return reply.send({ 
+        message: 'Import and associated applicants deleted successfully' 
+      });
+    } catch (error: any) {
+      return reply.status(500).send({ 
+        error: 'Server Error', 
+        message: error.message 
+      });
+    }
+  };
+
+  // GET applicants from an import
+  getApplicants = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const orgId = (request as any).organizationId;
+      const { id } = request.params as any;
+
+      const importRecord = await this.server.prisma.import.findFirst({
+        where: { id, organizationId: orgId }
+      });
+
+      if (!importRecord) {
+        return reply.status(404).send({ 
+          error: 'Not Found', 
+          message: 'Import not found' 
+        });
+      }
+
+      // Get applicants created from this import
+      const applicants = await this.server.prisma.applicant.findMany({
+        where: {
+          organizationId: orgId,
+          documents: {
+            path: ['importId'],
+            equals: id
+          }
+        },
+        include: {
+          group: {
+            select: {
+              id: true,
+              code: true,
+              name: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'asc' }
+      });
+
+      // Also get the metadata with parsed data (for uncreated applicants)
+      const metadata = importRecord.metadata as any;
+      const parsedApplicants = metadata?.applicants || [];
+
+      return reply.send({
+        import: importRecord,
+        applicants,
+        parsedApplicants
+      });
+    } catch (error: any) {
+      return reply.status(500).send({ 
+        error: 'Server Error', 
+        message: error.message 
+      });
+    }
+  };
+
   process = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const user = (request as any).user;
@@ -216,7 +363,8 @@ export class ImportController {
             validApplicants,
             importRecord.groupId,
             orgId,
-            user.id
+            user.id,
+            id
           );
           parseResult.successCount = createdCount;
         }
@@ -234,10 +382,10 @@ export class ImportController {
             processedCount: parseResult.successCount,
             errorCount: parseResult.errorCount,
             errors: parseResult.warnings.length > 0 ? { warnings: parseResult.warnings } : undefined,
-            metadata: { 
-              applicants: JSON.stringify(parseResult.applicants),
+            metadata: parseResult.applicants.length > 0 ? { 
+              applicants: parseResult.applicants,
               parsedAt: new Date().toISOString()
-            } as any
+            } as any : undefined
           }
         });
 
@@ -289,47 +437,14 @@ export class ImportController {
         });
       }
 
-      // Parse metadata to get applicants
-      let applicants: any[] = [];
-      let parsedAt = new Date().toISOString();
-      try {
-        if (importRecord.metadata) {
-          const meta = typeof importRecord.metadata === 'string' 
-            ? JSON.parse(importRecord.metadata) 
-            : importRecord.metadata;
-          
-          if (meta?.applicants) {
-            if (typeof meta.applicants === 'string') {
-              applicants = JSON.parse(meta.applicants);
-            } else if (Array.isArray(meta.applicants)) {
-              applicants = meta.applicants;
-            }
-          }
-          if (meta?.parsedAt) {
-            parsedAt = meta.parsedAt;
-          }
-        }
-      } catch (parseErr) {
-        console.error('Error parsing metadata:', parseErr);
-        applicants = [];
-      }
-
-      // Extract warnings from errors
-      const warnings = Array.isArray((importRecord.errors as any)?.warnings) 
-        ? (importRecord.errors as any).warnings 
-        : [];
-
       return reply.send({
-        data: {
-          id: importRecord.id,
-          status: importRecord.status,
-          totalCount: importRecord.totalCount,
-          processedCount: importRecord.processedCount,
-          errorCount: importRecord.errorCount,
-          warnings: warnings,
-          applicants: applicants || [],
-          errors: importRecord.errors
-        }
+        id: importRecord.id,
+        status: importRecord.status,
+        totalCount: importRecord.totalCount,
+        processedCount: importRecord.processedCount,
+        errorCount: importRecord.errorCount,
+        errors: importRecord.errors,
+        data: importRecord.metadata
       });
     } catch (error: any) {
       return reply.status(500).send({ 
@@ -340,7 +455,6 @@ export class ImportController {
   };
 
   getFields = async (request: FastifyRequest, reply: FastifyReply) => {
-    // Return field definitions for frontend
     return reply.send({
       fields: CHINA_VISA_FIELDS,
       sections: [
@@ -374,7 +488,6 @@ export class ImportController {
       };
     }
 
-    // Parse CSV into rows
     const rows = lines.map(line => this.parseCSVLine(line));
     return parseExcelData(rows);
   }
@@ -403,14 +516,9 @@ export class ImportController {
 
   private async processExcel(filePath: string): Promise<ParseResult> {
     try {
-      // Read the Excel file using xlsx
       const workbook = XLSX.readFile(filePath);
-      
-      // Get the first sheet
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      
-      // Convert to array of arrays
       const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
       
       if (rows.length < 2) {
@@ -455,7 +563,6 @@ export class ImportController {
 
   private async processImage(filePath: string): Promise<ParseResult> {
     try {
-      // Use Tesseract.js for OCR
       const { createWorker } = require('tesseract.js');
       const worker = await createWorker('eng');
       
@@ -480,7 +587,8 @@ export class ImportController {
     parsedApplicants: any[],
     groupId: string,
     orgId: string,
-    userId: string
+    userId: string,
+    importId: string
   ): Promise<number> {
     let createdCount = 0;
 
@@ -488,7 +596,6 @@ export class ImportController {
       try {
         const applicantData = transformToApplicant(parsed.data, groupId);
 
-        // Skip if no name
         if (!applicantData.firstName && !applicantData.lastName) {
           continue;
         }
@@ -509,11 +616,15 @@ export class ImportController {
               address: applicantData.address,
               groupId,
               organizationId: orgId,
-              documents: applicantData.documents,
+              documents: {
+                ...applicantData.documents,
+                importId,
+                source: parsed.source,
+                confidence: parsed.confidence
+              },
             }
           });
 
-          // Create audit log
           await tx.auditLog.create({
             data: {
               action: 'IMPORT_APPLICANT',
@@ -522,8 +633,7 @@ export class ImportController {
               newValues: {
                 name: `${applicant.firstName} ${applicant.lastName}`,
                 passport: applicant.passportNumber,
-                source: parsed.source,
-                confidence: parsed.confidence,
+                importId
               },
               userId,
               organizationId: orgId,

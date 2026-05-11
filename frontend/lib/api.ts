@@ -27,7 +27,6 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Only redirect on 401 if not already on login page
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
         const isLoginPage = window.location.pathname === '/login';
@@ -116,6 +115,9 @@ export const importsApi = {
   }),
   process: (id: string) => api.post(`/imports/${id}/process`),
   results: (id: string) => api.get(`/imports/${id}/results`),
+  delete: (id: string) => api.delete(`/imports/${id}`),
+  getApplicants: (id: string) => api.get(`/imports/${id}/applicants`),
+  getFields: () => api.get('/imports/fields'),
 };
 
 export const auditApi = {

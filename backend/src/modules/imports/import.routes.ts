@@ -22,6 +22,16 @@ export async function importRoutes(server: FastifyInstance) {
     preHandler: [server.authenticate, server.tenantGuard] 
   }, controller.getById);
 
+  // Delete import and associated applicants
+  server.delete('/:id', { 
+    preHandler: [server.authenticate, server.tenantGuard] 
+  }, controller.delete);
+
+  // Get applicants from an import
+  server.get('/:id/applicants', { 
+    preHandler: [server.authenticate, server.tenantGuard] 
+  }, controller.getApplicants);
+
   // Process import
   server.post('/:id/process', { 
     preHandler: [server.authenticate, server.tenantGuard] 

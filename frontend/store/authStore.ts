@@ -159,6 +159,8 @@ export const useAuthStore = create<AuthState>()(
       onRehydrateStorage: () => (state) => {
         // Called when persist has finished hydration
         if (state) {
+          // Set authenticated based on whether we have a token
+          state.isAuthenticated = !!(state.token && state.user);
           state.setHydrated();
         }
       },
