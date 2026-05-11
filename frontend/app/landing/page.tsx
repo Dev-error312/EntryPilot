@@ -111,20 +111,36 @@ const pricingPlans = [
 
 const faqs = [
   {
-    question: 'Can I upgrade anytime?',
-    answer: 'Yes, you can upgrade or downgrade your plan at any time from your organization settings. Changes are applied immediately and prorated for the current billing cycle.',
+    question: 'What is EntryPilot?',
+    answer: 'A visa workflow platform that helps travel agencies manage applicants, documents, group processing, and application tracking in one place.',
   },
   {
-    question: 'Is onboarding included?',
-    answer: 'Standard onboarding is available to all users. Enterprise customers receive a dedicated implementation specialist to help migrate existing data and setup custom workflows.',
+    question: 'Who is EntryPilot built for?',
+    answer: 'EntryPilot is designed for travel agencies, visa processing teams, and tour operators handling individual or group applications.',
   },
   {
-    question: 'How does OCR billing work?',
-    answer: 'OCR and Handwriting parsing are included in our Premium and Enterprise tiers. There are no per-document fees within your monthly applicant limit.',
+    question: 'Can we manage applicants by group?',
+    answer: 'Yes. Organize applicants by group code, batch, or departure date for faster processing and better tracking.',
   },
   {
-    question: 'Do you support enterprise deployments?',
-    answer: 'Absolutely. We support multi-branch configurations, custom data residency requirements, and SAML/SSO integration for large-scale agency networks.',
+    question: 'Does it support PDF and handwritten form reading?',
+    answer: 'Yes. EntryPilot can extract and process data from PDFs and handwritten forms to reduce manual entry.',
+  },
+  {
+    question: 'Can multiple employees use it together?',
+    answer: 'Absolutely. Role-based access lets your team collaborate securely across shared workflows.',
+  },
+  {
+    question: 'Is our client data secure?',
+    answer: 'Yes. EntryPilot uses secure authentication, audit logging, and organization-level data isolation.',
+  },
+  {
+    question: 'Can we customize visa templates?',
+    answer: 'Yes. Create country-specific templates with custom fields and validation rules.',
+  },
+  {
+    question: 'Why choose EntryPilot over spreadsheets?',
+    answer: 'It reduces errors, speeds up processing, improves visibility, and scales with your agency.',
   },
 ];
 
@@ -231,12 +247,12 @@ export default function LandingPage() {
       <nav className="fixed top-0 w-full z-50 bg-white/70 backdrop-blur-xl border-b border-slate-200/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <a href="#" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2 hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer p-0">
               <div className="w-8 h-8 rounded flex items-center justify-center">
                 <img src="/logo.png" alt="EntryPilot Logo" width={32} height={32} className="w-8 h-8" />
               </div>
               <span className="text-xl font-bold tracking-tight text-slate-900">EntryPilot</span>
-            </a>
+            </button>
             <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
               <button onClick={() => scrollToSection('features')} className="hover:text-slate-900 transition-colors cursor-pointer">Features</button>
               <button onClick={() => scrollToSection('workflow')} className="hover:text-slate-900 transition-colors cursor-pointer">Workflow</button>
@@ -305,9 +321,9 @@ export default function LandingPage() {
               Manage groups, applicants, applications, OCR imports, approvals, and audit trails from one intelligent platform.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <a href="#demo" className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-lg font-semibold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200">
+              <button onClick={() => scrollToSection('contact')} className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-lg font-semibold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 cursor-pointer border-none">
                 Book a Demo
-              </a>
+              </button>
               <button onClick={() => scrollToSection('features')} className="w-full sm:w-auto px-8 py-4 bg-white text-slate-900 rounded-lg font-semibold border border-slate-200 hover:border-slate-300 transition-all cursor-pointer">
                 Explore Platform
               </button>
@@ -979,12 +995,12 @@ export default function LandingPage() {
                 Upgrade your agency with structured, scalable workflow automation. Join the future of visa operations.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a href="#demo" className="px-8 py-4 bg-white text-blue-600 rounded-lg font-bold hover:bg-slate-50 transition-all shadow-lg">
+                <button onClick={() => scrollToSection('contact')} className="px-8 py-4 bg-white text-blue-600 rounded-lg font-bold hover:bg-slate-50 transition-all shadow-lg cursor-pointer border-none">
                   Book Demo
-                </a>
-                <a href="#signup" className="px-8 py-4 bg-blue-700 text-white rounded-lg font-bold hover:bg-blue-800 transition-all border border-blue-400/30">
+                </button>
+                <button onClick={() => scrollToSection('signup')} className="px-8 py-4 bg-blue-700 text-white rounded-lg font-bold hover:bg-blue-800 transition-all border border-blue-400/30 cursor-pointer">
                   Get Started
-                </a>
+                </button>
               </div>
             </div>
           </div>
@@ -996,12 +1012,12 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             <div>
-              <a href="#" className="flex items-center gap-2 mb-6 hover:opacity-80 transition-opacity">
+              <button onClick={() => scrollToSection('signup')} className="flex items-center gap-2 mb-6 hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer p-0">
                 <div className="w-6 h-6 rounded flex items-center justify-center">
                   <img src="/logo.png" alt="EntryPilot Logo" width={24} height={24} className="w-6 h-6" />
                 </div>
                 <span className="text-lg font-bold text-slate-900">EntryPilot</span>
-              </a>
+              </button>
               <p className="text-sm text-slate-500 leading-relaxed">
                 The modern standard for global visa processing operations.
               </p>
@@ -1009,27 +1025,27 @@ export default function LandingPage() {
             <div>
               <h5 className="font-bold text-slate-900 mb-6 text-sm">Product</h5>
               <ul className="space-y-3 text-sm text-slate-500">
-                <li><a href="#features" className="hover:text-blue-600">Features</a></li>
-                <li><a href="#features" className="hover:text-blue-600">OCR Engine</a></li>
-                <li><a href="#security" className="hover:text-blue-600">Security</a></li>
-                <li><a href="#pricing" className="hover:text-blue-600">Pricing</a></li>
+                <li><button onClick={() => scrollToSection('features')} className="hover:text-blue-600 bg-transparent border-none cursor-pointer p-0">Features</button></li>
+                <li><button onClick={() => scrollToSection('features')} className="hover:text-blue-600 bg-transparent border-none cursor-pointer p-0">OCR Engine</button></li>
+                <li><button onClick={() => scrollToSection('security')} className="hover:text-blue-600 bg-transparent border-none cursor-pointer p-0">Security</button></li>
+                <li><button onClick={() => scrollToSection('pricing')} className="hover:text-blue-600 bg-transparent border-none cursor-pointer p-0">Pricing</button></li>
               </ul>
             </div>
             <div>
               <h5 className="font-bold text-slate-900 mb-6 text-sm">Company</h5>
               <ul className="space-y-3 text-sm text-slate-500">
-                <li><a href="#about" className="hover:text-blue-600">About Us</a></li>
-                <li><a href="#contact" className="hover:text-blue-600">Contact</a></li>
-                <li><a href="#careers" className="hover:text-blue-600">Careers</a></li>
-                <li><a href="#blog" className="hover:text-blue-600">Blog</a></li>
+                <li><button onClick={() => scrollToSection('features')} className="hover:text-blue-600 bg-transparent border-none cursor-pointer p-0">About Us</button></li>
+                <li><button onClick={() => scrollToSection('contact')} className="hover:text-blue-600 bg-transparent border-none cursor-pointer p-0">Contact</button></li>
+                <li><button onClick={() => scrollToSection('features')} className="hover:text-blue-600 bg-transparent border-none cursor-pointer p-0">Careers</button></li>
+                <li><button onClick={() => scrollToSection('features')} className="hover:text-blue-600 bg-transparent border-none cursor-pointer p-0">Blog</button></li>
               </ul>
             </div>
             <div>
               <h5 className="font-bold text-slate-900 mb-6 text-sm">Legal</h5>
               <ul className="space-y-3 text-sm text-slate-500">
-                <li><a href="#privacy" className="hover:text-blue-600">Privacy Policy</a></li>
-                <li><a href="#terms" className="hover:text-blue-600">Terms of Service</a></li>
-                <li><a href="#cookies" className="hover:text-blue-600">Cookie Policy</a></li>
+                <li><a href="/privacy" className="hover:text-blue-600">Privacy Policy</a></li>
+                <li><button onClick={() => scrollToSection('features')} className="hover:text-blue-600 bg-transparent border-none cursor-pointer p-0">Terms of Service</button></li>
+                <li><button onClick={() => scrollToSection('features')} className="hover:text-blue-600 bg-transparent border-none cursor-pointer p-0">Cookie Policy</button></li>
               </ul>
             </div>
           </div>

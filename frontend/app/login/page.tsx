@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, ArrowRight, Plane, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
 export default function LoginPage() {
@@ -71,10 +71,10 @@ export default function LoginPage() {
 
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center">
-              <Plane className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+              <img src="/logo.png" alt="EntryPilot Logo" width={40} height={40} className="w-10 h-10" />
             </div>
-            <span className="text-xl font-semibold text-gray-900">VisaFlow</span>
+            <span className="text-xl font-semibold text-gray-900">EntryPilot</span>
           </div>
 
           {/* Header */}
@@ -169,7 +169,7 @@ export default function LoginPage() {
           <div className="mt-8 p-4 rounded-xl bg-gray-50 border border-gray-100">
             <p className="text-sm font-medium text-gray-700 mb-2">Demo Credentials</p>
             <div className="space-y-1.5 text-sm text-gray-600">
-              <p><span className="font-medium">Super Admin:</span> super@visaflow.com / admin123</p>
+              <p><span className="font-medium">Super Admin:</span> super@entrypilot.com / admin123</p>
               <p><span className="font-medium">Agency Admin:</span> admin@demo.com / admin123</p>
               <p><span className="font-medium">Employee:</span> employee@demo.com / employee123</p>
             </div>
