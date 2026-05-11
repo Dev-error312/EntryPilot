@@ -376,7 +376,7 @@ export default function ApplicantDetailPage() {
                       <td className="py-3 px-4 text-gray-700">
                         {app.destinationCountry}
                       </td>
-                      <td className="py-3 px-4 text-gray-700">{app.template.name}</td>
+                      <td className="py-3 px-4 text-gray-700">{app.template?.name || 'N/A'}</td>
                       <td className="py-3 px-4">
                         <span
                           className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(app.status)}`}
