@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuthStore } from '@/store/authStore';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
@@ -38,8 +39,15 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-xl bg-gray-900 flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-xl">V</span>
+          <div className="w-12 h-12 flex items-center justify-center mx-auto mb-4">
+            <Image
+              src="/logo.png"
+              alt="EntryPilot Logo"
+              width={48}
+              height={48}
+              className="w-12 h-12 object-contain"
+              priority
+            />
           </div>
           <div className="w-8 h-8 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto" />
           <p className="text-gray-500 mt-4">Loading...</p>
