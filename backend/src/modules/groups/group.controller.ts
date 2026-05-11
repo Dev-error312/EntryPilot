@@ -2,8 +2,8 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 
 const createGroupSchema = z.object({
-  code: z.string().min(2).max(20),
-  name: z.string().min(2),
+  code: z.string().min(2, 'Code must be at least 2 characters').max(20, 'Code must be at most 20 characters'),
+  name: z.string().min(2, 'Name must be at least 2 characters'),
   travelDate: z.string().datetime().optional(),
   externalAgent: z.string().optional(),
   notes: z.string().optional(),
@@ -62,16 +62,28 @@ export class GroupController {
       }
 
       const group = await this.server.prisma.$transaction(async (tx) => {
+        const createData: any = {
+          code: body.code.toUpperCase(),
+          name: body.name,
+          organizationId: orgId
+        };
+
+        // Only add optional fields if they have values
+        if (body.travelDate) {
+          createData.travelDate = new Date(body.travelDate);
+        }
+        if (body.externalAgent) {
+          createData.externalAgent = body.externalAgent;
+        }
+        if (body.notes) {
+          createData.notes = body.notes;
+        }
+        if (body.assignedEmployeeId) {
+          createData.assignedEmployeeId = body.assignedEmployeeId;
+        }
+
         const created = await tx.group.create({
-          data: {
-            code: body.code.toUpperCase(),
-            name: body.name,
-            travelDate: body.travelDate ? new Date(body.travelDate) : null,
-            externalAgent: body.externalAgent,
-            notes: body.notes,
-            assignedEmployeeId: body.assignedEmployeeId,
-            organizationId: orgId
-          },
+          data: createData,
           include: {
             assignedEmployee: {
               select: {
@@ -105,11 +117,14 @@ export class GroupController {
       return reply.status(201).send(group);
     } catch (error: any) {
       if (error.name === 'ZodError') {
+        const messages = error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
         return reply.status(400).send({ 
           error: 'Validation Error', 
+          message: messages,
           details: error.errors 
         });
       }
+      console.error('Group creation error:', error);
       return reply.status(500).send({ 
         error: 'Server Error', 
         message: error.message 

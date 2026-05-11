@@ -14,9 +14,11 @@ import {
   Edit,
   Archive,
   ArrowRight,
+  FolderOpen,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { groupsApi, usersApi } from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 
@@ -229,6 +231,20 @@ function CreateGroupModal({
     }
   }, [open]);
 
+  const handleClose = () => {
+    // Reset form when closing
+    setFormData({
+      code: '',
+      name: '',
+      travelDate: '',
+      externalAgent: '',
+      notes: '',
+      assignedEmployeeId: '',
+    });
+    setError('');
+    onClose();
+  };
+
   const loadEmployees = async () => {
     try {
       const response = await usersApi.list();
@@ -244,10 +260,65 @@ function CreateGroupModal({
     setError('');
 
     try {
-      await groupsApi.create(formData);
+      // Validate required fields
+      if (!formData.code.trim()) {
+        setError('Group Code is required');
+        setLoading(false);
+        return;
+      }
+      if (!formData.name.trim()) {
+        setError('Group Name is required');
+        setLoading(false);
+        return;
+      }
+
+      // Get user and organizationId from auth store
+      const { user } = useAuthStore.getState();
+      if (!user?.organizationId) {
+        setError('Organization not found. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
+      // Convert empty strings to null/undefined for optional fields
+      const payload: any = {
+        code: formData.code.trim(),
+        name: formData.name.trim(),
+        organizationId: user.organizationId,
+      };
+
+      // Only add optional fields if they have values
+      if (formData.travelDate) {
+        payload.travelDate = new Date(formData.travelDate).toISOString();
+      }
+      if (formData.externalAgent?.trim()) {
+        payload.externalAgent = formData.externalAgent.trim();
+      }
+      if (formData.notes?.trim()) {
+        payload.notes = formData.notes.trim();
+      }
+      if (formData.assignedEmployeeId) {
+        payload.assignedEmployeeId = formData.assignedEmployeeId;
+      }
+
+      console.log('Submitting payload:', payload);
+      await groupsApi.create(payload);
+      
+      // Reset form
+      setFormData({
+        code: '',
+        name: '',
+        travelDate: '',
+        externalAgent: '',
+        notes: '',
+        assignedEmployeeId: '',
+      });
+      
       onSuccess();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create group');
+      console.error('Create group error:', err.response?.data || err.message);
+      const errorMsg = err.response?.data?.message || err.response?.data?.details?.[0]?.message || 'Failed to create group';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -262,7 +333,7 @@ function CreateGroupModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
-            onClick={onClose}
+            onClick={handleClose}
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -387,7 +458,7 @@ function CreateGroupModal({
                 <div className="flex items-center gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="btn-secondary flex-1"
                   >
                     Cancel

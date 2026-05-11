@@ -10,16 +10,22 @@ export async function tenantMiddleware(request: FastifyRequest, reply: FastifyRe
     });
   }
 
-  // Super admins can access all organizations
+  // Super admins can access all organizations - organizationId must be provided
   if (user.role === 'SUPER_ADMIN') {
-    // For super admin, allow organizationId from query params or body
-    const orgId = (request.query as any)?.organizationId || 
-                  (request.body as any)?.organizationId ||
-                  request.params && (request.params as any).organizationId;
+    // Try to get organizationId from various sources
+    const orgId = 
+      (request.query as any)?.organizationId || 
+      (request.body as any)?.organizationId ||
+      (request.params as any)?.organizationId;
     
-    if (orgId) {
-      (request as any).organizationId = orgId;
+    if (!orgId) {
+      return reply.status(400).send({ 
+        error: 'Bad Request', 
+        message: 'Super admins must specify organizationId' 
+      });
     }
+    
+    (request as any).organizationId = orgId;
     return;
   }
 
