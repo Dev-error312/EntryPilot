@@ -341,4 +341,77 @@ export class UserController {
       });
     }
   };
+
+  delete = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const currentUser = (request as any).user;
+      const orgId = (request as any).organizationId;
+      const { id } = request.params as any;
+
+      if (currentUser.role === 'AGENCY_EMPLOYEE') {
+        return reply.status(403).send({ 
+          error: 'Forbidden', 
+          message: 'Only admins can delete users' 
+        });
+      }
+
+      if (currentUser.id === id) {
+        return reply.status(400).send({ 
+          error: 'Bad Request', 
+          message: 'Cannot delete yourself' 
+        });
+      }
+
+      const user = await this.server.prisma.user.findFirst({
+        where: { 
+          id,
+          ...(currentUser.role === 'SUPER_ADMIN' ? {} : { organizationId: orgId })
+        }
+      });
+
+      if (!user) {
+        return reply.status(404).send({ 
+          error: 'Not Found', 
+          message: 'User not found' 
+        });
+      }
+
+      // Soft delete - just mark as inactive
+      const deleted = await this.server.prisma.user.update({
+        where: { id },
+        data: { isActive: false }
+      });
+
+      // Update seat count
+      if (user.organizationId) {
+        await this.server.prisma.organization.update({
+          where: { id: user.organizationId },
+          data: { usedSeats: { decrement: 1 } }
+        });
+      }
+
+      // Audit log
+      if (user.organizationId) {
+        await this.server.prisma.auditLog.create({
+          data: {
+            action: 'DELETE_USER',
+            entityType: 'User',
+            entityId: id,
+            oldValues: { email: user.email },
+            userId: currentUser.id,
+            organizationId: user.organizationId
+          }
+        });
+      }
+
+      return reply.send({ 
+        message: 'User deleted successfully'
+      });
+    } catch (error: any) {
+      return reply.status(500).send({ 
+        error: 'Server Error', 
+        message: error.message 
+      });
+    }
+  };
 }

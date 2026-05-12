@@ -55,6 +55,7 @@ export const organizationsApi = {
   create: (data: any) => api.post('/organizations', data),
   update: (id: string, data: any) => api.put(`/organizations/${id}`, data),
   toggle: (id: string) => api.patch(`/organizations/${id}/toggle`),
+  delete: (id: string) => api.delete(`/organizations/${id}`),
   stats: (id: string) => api.get(`/organizations/${id}/stats`),
 };
 
@@ -64,6 +65,7 @@ export const usersApi = {
   create: (data: any) => api.post('/users', data),
   update: (id: string, data: any) => api.put(`/users/${id}`, data),
   toggle: (id: string) => api.patch(`/users/${id}/toggle`),
+  delete: (id: string) => api.delete(`/users/${id}`),
 };
 
 export const groupsApi = {
@@ -105,6 +107,7 @@ export const templatesApi = {
   create: (data: any) => api.post('/templates', data),
   update: (id: string, data: any) => api.put(`/templates/${id}`, data),
   toggle: (id: string) => api.patch(`/templates/${id}/toggle`),
+  delete: (id: string) => api.delete(`/templates/${id}`),
 };
 
 export const importsApi = {

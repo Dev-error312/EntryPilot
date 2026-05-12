@@ -23,4 +23,8 @@ export async function userRoutes(server: FastifyInstance) {
   server.patch('/:id/toggle', { 
     preHandler: [server.authenticate, server.tenantGuard] 
   }, controller.toggleActive);
+
+  server.delete('/:id', { 
+    preHandler: [server.authenticate, server.tenantGuard] 
+  }, controller.delete);
 }

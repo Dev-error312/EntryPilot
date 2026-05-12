@@ -13,6 +13,7 @@ import {
   MoreVertical,
   ToggleLeft,
   ToggleRight,
+  Trash2,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { usersApi } from '@/lib/api';
@@ -44,6 +45,8 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadMembers();
@@ -69,6 +72,24 @@ export default function TeamPage() {
     }
   };
 
+  const deleteMember = async (id: string, name: string) => {
+    if (!confirm(`Delete "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+    setDeleting(id);
+    setError(null);
+    try {
+      await usersApi.delete(id);
+      loadMembers();
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Failed to delete member';
+      setError(errorMsg);
+      console.error('Failed to delete member:', error);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   const filteredMembers = members.filter(
     (m) =>
       m.firstName.toLowerCase().includes(search.toLowerCase()) ||
@@ -79,6 +100,19 @@ export default function TeamPage() {
   return (
     <DashboardLayout title="Team" subtitle="Manage your team members">
       <div className="space-y-6">
+        {error && (
+          <div className="p-4 rounded-lg bg-red-50 text-red-600 border border-red-200">
+            <div className="flex items-center justify-between">
+              <p>{error}</p>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-600 hover:text-red-700"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
@@ -165,22 +199,37 @@ export default function TeamPage() {
                         </span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => toggleMember(member.id)}
-                      className={clsx(
-                        'p-1.5 rounded-lg transition-colors',
-                        member.isActive
-                          ? 'text-green-600 hover:bg-green-50'
-                          : 'text-gray-400 hover:bg-gray-100'
-                      )}
-                      title={member.isActive ? 'Deactivate' : 'Activate'}
-                    >
-                      {member.isActive ? (
-                        <ToggleRight className="w-5 h-5" />
-                      ) : (
-                        <ToggleLeft className="w-5 h-5" />
-                      )}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleMember(member.id)}
+                        className={clsx(
+                          'p-1.5 rounded-lg transition-colors',
+                          member.isActive
+                            ? 'text-green-600 hover:bg-green-50'
+                            : 'text-red-600 hover:bg-red-50'
+                        )}
+                        title={member.isActive ? 'Deactivate' : 'Activate'}
+                      >
+                        {member.isActive ? (
+                          <ToggleRight className="w-5 h-5" />
+                        ) : (
+                          <ToggleLeft className="w-5 h-5" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => deleteMember(member.id, `${member.firstName} ${member.lastName}`)}
+                        disabled={deleting === member.id}
+                        className={clsx(
+                          'p-1.5 rounded-lg transition-colors',
+                          deleting === member.id
+                            ? 'text-gray-300 cursor-not-allowed'
+                            : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                        )}
+                        title="Delete member"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-2 text-sm">

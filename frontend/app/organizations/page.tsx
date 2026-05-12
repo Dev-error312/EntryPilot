@@ -13,6 +13,7 @@ import {
   ToggleRight,
   Mail,
   Phone,
+  Trash2,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { organizationsApi } from '@/lib/api';
@@ -42,6 +43,8 @@ export default function OrganizationsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadOrganizations();
@@ -67,6 +70,24 @@ export default function OrganizationsPage() {
     }
   };
 
+  const deleteOrganization = async (id: string, name: string) => {
+    if (!confirm(`Delete "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+    setDeleting(id);
+    setError(null);
+    try {
+      await organizationsApi.delete(id);
+      loadOrganizations();
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Failed to delete organization';
+      setError(errorMsg);
+      console.error('Failed to delete organization:', error);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   const filteredOrgs = organizations.filter(
     (org) =>
       org.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -77,6 +98,19 @@ export default function OrganizationsPage() {
   return (
     <DashboardLayout title="Organizations" subtitle="Manage agencies and clients">
       <div className="space-y-6">
+        {error && (
+          <div className="p-4 rounded-lg bg-red-50 text-red-600 border border-red-200">
+            <div className="flex items-center justify-between">
+              <p>{error}</p>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-600 hover:text-red-700"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
@@ -151,22 +185,37 @@ export default function OrganizationsPage() {
                     </div>
                     <h3 className="font-medium text-gray-900">{org.name}</h3>
                   </div>
-                  <button
-                    onClick={() => toggleOrganization(org.id)}
-                    className={clsx(
-                      'p-1.5 rounded-lg transition-colors',
-                      org.isActive
-                        ? 'text-green-600 hover:bg-green-50'
-                        : 'text-gray-400 hover:bg-gray-100'
-                    )}
-                    title={org.isActive ? 'Deactivate' : 'Activate'}
-                  >
-                    {org.isActive ? (
-                      <ToggleRight className="w-5 h-5" />
-                    ) : (
-                      <ToggleLeft className="w-5 h-5" />
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleOrganization(org.id)}
+                      className={clsx(
+                        'p-1.5 rounded-lg transition-colors',
+                        org.isActive
+                          ? 'text-green-600 hover:bg-green-50'
+                          : 'text-red-600 hover:bg-red-50'
+                      )}
+                      title={org.isActive ? 'Deactivate' : 'Activate'}
+                    >
+                      {org.isActive ? (
+                        <ToggleRight className="w-5 h-5" />
+                      ) : (
+                        <ToggleLeft className="w-5 h-5" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => deleteOrganization(org.id, org.name)}
+                      disabled={deleting === org.id}
+                      className={clsx(
+                        'p-1.5 rounded-lg transition-colors',
+                        deleting === org.id
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                      )}
+                      title="Delete organization"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-2 text-sm text-gray-600 mb-4">

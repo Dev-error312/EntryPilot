@@ -28,7 +28,8 @@ const createTemplateSchema = z.object({
   visaType: z.string().min(2),
   description: z.string().optional(),
   fields: z.array(fieldSchema),
-  conditions: z.array(conditionSchema).optional()
+  conditions: z.array(conditionSchema).optional(),
+  organizationId: z.string().optional()
 });
 
 const updateTemplateSchema = z.object({
@@ -44,7 +45,7 @@ export class TemplateController {
   create = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const user = (request as any).user;
-      const orgId = (request as any).organizationId;
+      let orgId = (request as any).organizationId;
 
       // Only admins can create templates
       if (user.role === 'AGENCY_EMPLOYEE') {
@@ -55,6 +56,17 @@ export class TemplateController {
       }
 
       const body = createTemplateSchema.parse(request.body);
+
+      // Super admins must specify organizationId
+      if (user.role === 'SUPER_ADMIN') {
+        if (!body.organizationId) {
+          return reply.status(400).send({ 
+            error: 'Bad Request', 
+            message: 'Super admins must specify organizationId' 
+          });
+        }
+        orgId = body.organizationId;
+      }
 
       // Check if template already exists
       const existing = await this.server.prisma.template.findFirst({
@@ -338,6 +350,62 @@ export class TemplateController {
       return reply.send({ 
         message: `Template ${updated.isActive ? 'activated' : 'deactivated'}`,
         isActive: updated.isActive 
+      });
+    } catch (error: any) {
+      return reply.status(500).send({ 
+        error: 'Server Error', 
+        message: error.message 
+      });
+    }
+  };
+
+  delete = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const user = (request as any).user;
+      const orgId = (request as any).organizationId;
+      const { id } = request.params as any;
+
+      if (user.role === 'AGENCY_EMPLOYEE') {
+        return reply.status(403).send({ 
+          error: 'Forbidden', 
+          message: 'Only admins can delete templates' 
+        });
+      }
+
+      const template = await this.server.prisma.template.findFirst({
+        where: { 
+          id,
+          ...(user.role === 'SUPER_ADMIN' ? {} : { organizationId: orgId })
+        }
+      });
+
+      if (!template) {
+        return reply.status(404).send({ 
+          error: 'Not Found', 
+          message: 'Template not found' 
+        });
+      }
+
+      // Soft delete - just mark as inactive
+      const deleted = await this.server.prisma.template.update({
+        where: { id },
+        data: { isActive: false }
+      });
+
+      // Audit log
+      await this.server.prisma.auditLog.create({
+        data: {
+          action: 'DELETE_TEMPLATE',
+          entityType: 'Template',
+          entityId: id,
+          oldValues: { name: template.name },
+          userId: user.id,
+          organizationId: template.organizationId
+        }
+      });
+
+      return reply.send({ 
+        message: 'Template deleted successfully'
       });
     } catch (error: any) {
       return reply.status(500).send({ 

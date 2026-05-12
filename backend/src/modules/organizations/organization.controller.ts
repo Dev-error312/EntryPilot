@@ -400,4 +400,57 @@ export class OrganizationController {
       });
     }
   };
+
+  delete = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const user = (request as any).user;
+      
+      if (user.role !== 'SUPER_ADMIN') {
+        return reply.status(403).send({ 
+          error: 'Forbidden', 
+          message: 'Only super admins can delete organizations' 
+        });
+      }
+
+      const { id } = request.params as any;
+
+      const org = await this.server.prisma.organization.findUnique({
+        where: { id }
+      });
+
+      if (!org) {
+        return reply.status(404).send({ 
+          error: 'Not Found', 
+          message: 'Organization not found' 
+        });
+      }
+
+      // Soft delete - just mark as inactive and clear data
+      const deleted = await this.server.prisma.organization.update({
+        where: { id },
+        data: { isActive: false }
+      });
+
+      // Audit log
+      await this.server.prisma.auditLog.create({
+        data: {
+          action: 'DELETE_ORGANIZATION',
+          entityType: 'Organization',
+          entityId: id,
+          oldValues: { name: org.name },
+          userId: user.id,
+          organizationId: id
+        }
+      });
+
+      return reply.send({ 
+        message: 'Organization deleted successfully'
+      });
+    } catch (error: any) {
+      return reply.status(500).send({ 
+        error: 'Server Error', 
+        message: error.message 
+      });
+    }
+  };
 }

@@ -13,6 +13,14 @@ export async function organizationRoutes(server: FastifyInstance) {
     preHandler: [server.authenticate] 
   }, controller.list);
 
+  server.get('/:id/stats', { 
+    preHandler: [server.authenticate] 
+  }, controller.getStats);
+
+  server.patch('/:id/toggle', { 
+    preHandler: [server.authenticate] 
+  }, controller.toggleActive);
+
   server.get('/:id', { 
     preHandler: [server.authenticate] 
   }, controller.getById);
@@ -21,11 +29,7 @@ export async function organizationRoutes(server: FastifyInstance) {
     preHandler: [server.authenticate] 
   }, controller.update);
 
-  server.patch('/:id/toggle', { 
+  server.delete('/:id', { 
     preHandler: [server.authenticate] 
-  }, controller.toggleActive);
-
-  server.get('/:id/stats', { 
-    preHandler: [server.authenticate] 
-  }, controller.getStats);
+  }, controller.delete);
 }

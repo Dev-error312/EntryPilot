@@ -11,9 +11,11 @@ import {
   Edit,
   ToggleLeft,
   ToggleRight,
+  Trash2,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { templatesApi } from '@/lib/api';
+import { templatesApi, organizationsApi } from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 
@@ -34,13 +36,20 @@ interface Template {
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [organizations, setOrganizations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuthStore();
 
   useEffect(() => {
     loadTemplates();
-  }, []);
+    if (user?.role === 'SUPER_ADMIN') {
+      loadOrganizations();
+    }
+  }, [user?.role]);
 
   const loadTemplates = async () => {
     try {
@@ -53,12 +62,39 @@ export default function TemplatesPage() {
     }
   };
 
+  const loadOrganizations = async () => {
+    try {
+      const response = await organizationsApi.list();
+      setOrganizations(response.data.data);
+    } catch (error) {
+      console.error('Failed to load organizations:', error);
+    }
+  };
+
   const toggleTemplate = async (id: string) => {
     try {
       await templatesApi.toggle(id);
       loadTemplates();
     } catch (error) {
       console.error('Failed to toggle template:', error);
+    }
+  };
+
+  const deleteTemplate = async (id: string, name: string) => {
+    if (!confirm(`Delete "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+    setDeleting(id);
+    setError(null);
+    try {
+      await templatesApi.delete(id);
+      loadTemplates();
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Failed to delete template';
+      setError(errorMsg);
+      console.error('Failed to delete template:', error);
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -72,6 +108,19 @@ export default function TemplatesPage() {
   return (
     <DashboardLayout title="Templates" subtitle="Manage visa form templates">
       <div className="space-y-6">
+        {error && (
+          <div className="p-4 rounded-lg bg-red-50 text-red-600 border border-red-200">
+            <div className="flex items-center justify-between">
+              <p>{error}</p>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-600 hover:text-red-700"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
@@ -140,22 +189,37 @@ export default function TemplatesPage() {
                     </span>
                     <span className="badge badge-gray">{template.visaType}</span>
                   </div>
-                  <button
-                    onClick={() => toggleTemplate(template.id)}
-                    className={clsx(
-                      'p-1.5 rounded-lg transition-colors',
-                      template.isActive
-                        ? 'text-green-600 hover:bg-green-50'
-                        : 'text-gray-400 hover:bg-gray-100'
-                    )}
-                    title={template.isActive ? 'Deactivate' : 'Activate'}
-                  >
-                    {template.isActive ? (
-                      <ToggleRight className="w-5 h-5" />
-                    ) : (
-                      <ToggleLeft className="w-5 h-5" />
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleTemplate(template.id)}
+                      className={clsx(
+                        'p-1.5 rounded-lg transition-colors',
+                        template.isActive
+                          ? 'text-green-600 hover:bg-green-50'
+                          : 'text-red-600 hover:bg-red-50'
+                      )}
+                      title={template.isActive ? 'Deactivate' : 'Activate'}
+                    >
+                      {template.isActive ? (
+                        <ToggleRight className="w-5 h-5" />
+                      ) : (
+                        <ToggleLeft className="w-5 h-5" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => deleteTemplate(template.id, template.name)}
+                      disabled={deleting === template.id}
+                      className={clsx(
+                        'p-1.5 rounded-lg transition-colors',
+                        deleting === template.id
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                      )}
+                      title="Delete template"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
                 <h3 className="font-medium text-gray-900 mb-2">{template.name}</h3>
                 {template.description && (
@@ -194,6 +258,8 @@ export default function TemplatesPage() {
           setShowCreateModal(false);
           loadTemplates();
         }}
+        isSuperAdmin={user?.role === 'SUPER_ADMIN'}
+        organizations={organizations}
       />
     </DashboardLayout>
   );
@@ -203,16 +269,21 @@ function CreateTemplateModal({
   open,
   onClose,
   onSuccess,
+  isSuperAdmin = false,
+  organizations = [],
 }: {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  isSuperAdmin?: boolean;
+  organizations?: any[];
 }) {
   const [formData, setFormData] = useState({
     name: '',
     country: '',
     visaType: '',
     description: '',
+    organizationId: '',
     fields: [
       { id: 'passport', label: 'Passport Number', type: 'text', required: true },
       { id: 'arrival', label: 'Arrival Date', type: 'date', required: true },
@@ -226,8 +297,17 @@ function CreateTemplateModal({
     setLoading(true);
     setError('');
 
+    if (isSuperAdmin && !formData.organizationId) {
+      setError('Please select an organization');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await templatesApi.create(formData);
+      const submitData = isSuperAdmin 
+        ? { ...formData, organizationId: formData.organizationId }
+        : formData;
+      await templatesApi.create(submitData);
       onSuccess();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create template');
@@ -290,6 +370,29 @@ function CreateTemplateModal({
                     required
                   />
                 </div>
+
+                {isSuperAdmin && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Organization *
+                    </label>
+                    <select
+                      value={formData.organizationId}
+                      onChange={(e) =>
+                        setFormData({ ...formData, organizationId: e.target.value })
+                      }
+                      className="input"
+                      required
+                    >
+                      <option value="">Select organization</option>
+                      {organizations.map((org) => (
+                        <option key={org.id} value={org.id}>
+                          {org.name} ({org.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>

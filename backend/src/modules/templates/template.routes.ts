@@ -16,6 +16,10 @@ export async function templateRoutes(server: FastifyInstance) {
     preHandler: [server.authenticate, server.tenantGuard] 
   }, controller.listByCountry);
 
+  server.patch('/:id/toggle', { 
+    preHandler: [server.authenticate, server.tenantGuard] 
+  }, controller.toggleActive);
+
   server.get('/:id', { 
     preHandler: [server.authenticate, server.tenantGuard] 
   }, controller.getById);
@@ -24,7 +28,7 @@ export async function templateRoutes(server: FastifyInstance) {
     preHandler: [server.authenticate, server.tenantGuard] 
   }, controller.update);
 
-  server.patch('/:id/toggle', { 
+  server.delete('/:id', { 
     preHandler: [server.authenticate, server.tenantGuard] 
-  }, controller.toggleActive);
+  }, controller.delete);
 }
