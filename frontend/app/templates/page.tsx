@@ -14,6 +14,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { templatesApi, organizationsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { format } from 'date-fns';
@@ -42,6 +43,11 @@ export default function TemplatesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; templateId: string; templateName: string }>({
+    open: false,
+    templateId: '',
+    templateName: '',
+  });
   const { user } = useAuthStore();
 
   useEffect(() => {
@@ -80,14 +86,21 @@ export default function TemplatesPage() {
     }
   };
 
-  const deleteTemplate = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This action cannot be undone.`)) {
-      return;
-    }
-    setDeleting(id);
+  const openDeleteModal = (id: string, name: string) => {
+    setDeleteModal({ open: true, templateId: id, templateName: name });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ open: false, templateId: '', templateName: '' });
+  };
+
+  const confirmDeleteTemplate = async () => {
+    const { templateId } = deleteModal;
+    closeDeleteModal();
+    setDeleting(templateId);
     setError(null);
     try {
-      await templatesApi.delete(id);
+      await templatesApi.delete(templateId);
       loadTemplates();
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Failed to delete template';
@@ -207,7 +220,7 @@ export default function TemplatesPage() {
                       )}
                     </button>
                     <button
-                      onClick={() => deleteTemplate(template.id, template.name)}
+                      onClick={() => openDeleteModal(template.id, template.name)}
                       disabled={deleting === template.id}
                       className={clsx(
                         'p-1.5 rounded-lg transition-colors',
@@ -260,6 +273,17 @@ export default function TemplatesPage() {
         }}
         isSuperAdmin={user?.role === 'SUPER_ADMIN'}
         organizations={organizations}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        open={deleteModal.open}
+        title="Delete Template"
+        description="This template will be permanently removed and can no longer be used for new applications."
+        itemName={deleteModal.templateName}
+        isLoading={deleting === deleteModal.templateId}
+        onConfirm={confirmDeleteTemplate}
+        onCancel={closeDeleteModal}
       />
     </DashboardLayout>
   );

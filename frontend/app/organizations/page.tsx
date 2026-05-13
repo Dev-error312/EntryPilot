@@ -16,6 +16,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { organizationsApi } from '@/lib/api';
 import { format } from 'date-fns';
 import clsx from 'clsx';
@@ -45,6 +46,11 @@ export default function OrganizationsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; orgId: string; orgName: string }>({
+    open: false,
+    orgId: '',
+    orgName: '',
+  });
 
   useEffect(() => {
     loadOrganizations();
@@ -70,14 +76,21 @@ export default function OrganizationsPage() {
     }
   };
 
-  const deleteOrganization = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This action cannot be undone.`)) {
-      return;
-    }
-    setDeleting(id);
+  const openDeleteModal = (id: string, name: string) => {
+    setDeleteModal({ open: true, orgId: id, orgName: name });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ open: false, orgId: '', orgName: '' });
+  };
+
+  const confirmDeleteOrganization = async () => {
+    const { orgId } = deleteModal;
+    closeDeleteModal();
+    setDeleting(orgId);
     setError(null);
     try {
-      await organizationsApi.delete(id);
+      await organizationsApi.delete(orgId);
       loadOrganizations();
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Failed to delete organization';
@@ -203,7 +216,7 @@ export default function OrganizationsPage() {
                       )}
                     </button>
                     <button
-                      onClick={() => deleteOrganization(org.id, org.name)}
+                      onClick={() => openDeleteModal(org.id, org.name)}
                       disabled={deleting === org.id}
                       className={clsx(
                         'p-1.5 rounded-lg transition-colors',
@@ -299,6 +312,17 @@ export default function OrganizationsPage() {
           setShowCreateModal(false);
           loadOrganizations();
         }}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        open={deleteModal.open}
+        title="Delete Organization"
+        description="This organization and all its associated data will be permanently removed."
+        itemName={deleteModal.orgName}
+        isLoading={deleting === deleteModal.orgId}
+        onConfirm={confirmDeleteOrganization}
+        onCancel={closeDeleteModal}
       />
     </DashboardLayout>
   );

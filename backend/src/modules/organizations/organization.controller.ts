@@ -138,6 +138,7 @@ export class OrganizationController {
       // Non-super admins can only see their own organization
       if (user.role !== 'SUPER_ADMIN') {
         where.id = user.organizationId;
+        where.isActive = true;
       } else {
         if (search) {
           where.OR = [
@@ -146,9 +147,8 @@ export class OrganizationController {
             { email: { contains: search, mode: 'insensitive' } }
           ];
         }
-        if (isActive !== undefined) {
-          where.isActive = isActive === 'true';
-        }
+        // Show only active organizations by default, unless explicitly querying for inactive
+        where.isActive = isActive === 'false' ? false : true;
       }
 
       const [organizations, total] = await Promise.all([

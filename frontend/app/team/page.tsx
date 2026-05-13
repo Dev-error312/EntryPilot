@@ -16,6 +16,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { usersApi } from '@/lib/api';
 import { format } from 'date-fns';
 import clsx from 'clsx';
@@ -47,6 +48,11 @@ export default function TeamPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; memberId: string; memberName: string }>({
+    open: false,
+    memberId: '',
+    memberName: '',
+  });
 
   useEffect(() => {
     loadMembers();
@@ -72,14 +78,21 @@ export default function TeamPage() {
     }
   };
 
-  const deleteMember = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This action cannot be undone.`)) {
-      return;
-    }
-    setDeleting(id);
+  const openDeleteModal = (id: string, name: string) => {
+    setDeleteModal({ open: true, memberId: id, memberName: name });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ open: false, memberId: '', memberName: '' });
+  };
+
+  const confirmDeleteMember = async () => {
+    const { memberId } = deleteModal;
+    closeDeleteModal();
+    setDeleting(memberId);
     setError(null);
     try {
-      await usersApi.delete(id);
+      await usersApi.delete(memberId);
       loadMembers();
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Failed to delete member';
@@ -220,7 +233,7 @@ export default function TeamPage() {
                         )}
                       </button>
                       <button
-                        onClick={() => deleteMember(member.id, `${member.firstName} ${member.lastName}`)}
+                        onClick={() => openDeleteModal(member.id, `${member.firstName} ${member.lastName}`)}
                         disabled={deleting === member.id || member.role === 'AGENCY_ADMIN' || member.role === 'SUPER_ADMIN'}
                         className={clsx(
                           'p-1.5 rounded-lg transition-colors',
@@ -278,6 +291,17 @@ export default function TeamPage() {
           setShowCreateModal(false);
           loadMembers();
         }}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        open={deleteModal.open}
+        title="Delete Team Member"
+        description="This team member will be permanently removed from your organization."
+        itemName={deleteModal.memberName}
+        isLoading={deleting === deleteModal.memberId}
+        onConfirm={confirmDeleteMember}
+        onCancel={closeDeleteModal}
       />
     </DashboardLayout>
   );

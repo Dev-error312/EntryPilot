@@ -27,6 +27,7 @@ import {
   FileCheck,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { importsApi, groupsApi, applicantsApi } from '@/lib/api';
 import { format } from 'date-fns';
 import clsx from 'clsx';
@@ -119,6 +120,11 @@ export default function ImportPage() {
   const [editingApplicant, setEditingApplicant] = useState<string | null>(null);
   const [editData, setEditData] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; importId: string; importName: string }>({
+    open: false,
+    importId: '',
+    importName: '',
+  });
 
   useEffect(() => {
     loadData();
@@ -214,17 +220,23 @@ export default function ImportPage() {
     }
   };
 
-  const deleteImport = async (id: string, fileName: string) => {
-    if (!confirm(`Delete "${fileName}" and all associated applicants? This cannot be undone.`)) {
-      return;
-    }
+  const openDeleteModal = (id: string, fileName: string) => {
+    setDeleteModal({ open: true, importId: id, importName: fileName });
+  };
 
-    setDeleting(id);
+  const closeDeleteModal = () => {
+    setDeleteModal({ open: false, importId: '', importName: '' });
+  };
+
+  const confirmDeleteImport = async () => {
+    const { importId } = deleteModal;
+    closeDeleteModal();
+    setDeleting(importId);
     try {
-      await importsApi.delete(id);
+      await importsApi.delete(importId);
       setSuccess('Import deleted successfully');
       loadData();
-      if (viewImportId === id) {
+      if (viewImportId === importId) {
         setViewImportId(null);
         setViewData(null);
       }
@@ -445,7 +457,7 @@ export default function ImportPage() {
                           </button>
                         )}
                         
-                        <button onClick={() => deleteImport(imp.id, imp.fileName)} disabled={deleting === imp.id}
+                        <button onClick={() => openDeleteModal(imp.id, imp.fileName)} disabled={deleting === imp.id}
                           className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                           title="Delete import">
                           {deleting === imp.id ? (
@@ -492,7 +504,7 @@ export default function ImportPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {viewData && (
-                    <button onClick={() => deleteImport(viewData.import.id, viewData.import.fileName)}
+                    <button onClick={() => openDeleteModal(viewData.import.id, viewData.import.fileName)}
                       className="btn-danger text-sm py-1.5 flex items-center gap-1">
                       <Trash2 className="w-4 h-4" />
                       Delete Import
