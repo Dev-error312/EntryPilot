@@ -3,41 +3,48 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading, error, clearError, isHydrated, token, user } = useAuthStore();
+  const { login, isHydrated, token, user } = useAuthStore();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [mounted, setMounted] = useState(false);
 
-  // Redirect if already authenticated
   useEffect(() => {
-    if (isHydrated && token && user) {
-      router.push('/dashboard');
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || !isHydrated) return;
+
+    if (token && user) {
+      router.replace('/dashboard');
     }
-  }, [isHydrated, token, user, router]);
+  }, [mounted, isHydrated, token, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
+    setError('');
+    setIsLoading(true);
     
     try {
       await login(email, password);
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 100);
-    } catch (err) {
-      // Error is handled by store
+      router.replace('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Show loading while hydrating
-  if (!isHydrated) {
+  if (!mounted || !isHydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="w-8 h-8 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
@@ -54,25 +61,24 @@ export default function LoginPage() {
     <div className="min-h-screen flex">
       {/* Left side - Form */}
       <div className="flex-1 flex items-center justify-center p-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
-        >
+        <div className="w-full max-w-md">
           {/* Back to home link */}
           <Link 
-            href="/"
+            href="/landing"
             className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-8 transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
             Back to home
           </Link>
 
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center">
-              <img src="/logo.png" alt="EntryPilot Logo" width={40} height={40} className="w-10 h-10" />
+            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
             </div>
             <span className="text-xl font-semibold text-gray-900">EntryPilot</span>
           </div>
@@ -90,13 +96,9 @@ export default function LoginPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm"
-              >
+              <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm">
                 {error}
-              </motion.div>
+              </div>
             )}
 
             <div>
@@ -131,7 +133,16 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
                 </button>
               </div>
             </div>
@@ -159,7 +170,9 @@ export default function LoginPage() {
               ) : (
                 <>
                   Sign in
-                  <ArrowRight className="w-4 h-4" />
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
                 </>
               )}
             </button>
@@ -169,33 +182,25 @@ export default function LoginPage() {
           <div className="mt-8 p-4 rounded-xl bg-gray-50 border border-gray-100">
             <p className="text-sm font-medium text-gray-700 mb-2">Demo Credentials</p>
             <div className="space-y-1.5 text-sm text-gray-600">
-              <p><span className="font-medium">Super Admin:</span> super@entrypilot.com / admin123</p>
+              <p><span className="font-medium">Super Admin:</span> super@visaflow.com / admin123</p>
               <p><span className="font-medium">Agency Admin:</span> admin@demo.com / admin123</p>
               <p><span className="font-medium">Employee:</span> employee@demo.com / employee123</p>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {/* Right side - Visual */}
       <div className="hidden lg:flex flex-1 bg-slate-950 items-center justify-center p-12">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-          className="max-w-lg text-center"
-        >
+        <div className="max-w-lg text-center">
           <div className="relative mb-8">
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-64 h-64 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 blur-3xl" />
             </div>
             <div className="relative grid grid-cols-3 gap-4">
               {[...Array(9)].map((_, i) => (
-                <motion.div
+                <div
                   key={i}
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, delay: 0.5 + i * 0.05 }}
                   className="aspect-square rounded-xl bg-white/5 backdrop-blur-sm border border-white/10"
                 />
               ))}
@@ -208,7 +213,7 @@ export default function LoginPage() {
             Manage groups, applicants, and applications with ease. 
             OCR-powered imports and complete audit trails.
           </p>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
