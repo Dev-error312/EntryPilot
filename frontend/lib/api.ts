@@ -10,7 +10,7 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('entrypilot-auth');
+    const stored = localStorage.getItem('visaflow-auth');
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -31,7 +31,7 @@ api.interceptors.response.use(
       if (typeof window !== 'undefined') {
         const isLoginPage = window.location.pathname === '/login';
         if (!isLoginPage) {
-          localStorage.removeItem('entrypilot-auth');
+          localStorage.removeItem('visaflow-auth');
           window.location.href = '/login';
         }
       }
@@ -76,6 +76,7 @@ export const groupsApi = {
   update: (id: string, data: any) => api.put(`/groups/${id}`, data),
   assign: (id: string, employeeId: string) => api.post(`/groups/${id}/assign`, { employeeId }),
   archive: (id: string) => api.patch(`/groups/${id}/archive`),
+  delete: (id: string) => api.delete(`/groups/${id}`),
 };
 
 export const applicantsApi = {

@@ -30,23 +30,23 @@ export class GroupController {
 
       // Check if code already exists in organization
       const existing = await this.server.prisma.group.findFirst({
-        where: { 
+        where: {
           code: body.code.toUpperCase(),
-          organizationId: orgId 
+          organizationId: orgId
         }
       });
 
       if (existing) {
-        return reply.status(409).send({ 
-          error: 'Conflict', 
-          message: 'Group code already exists in your organization' 
+        return reply.status(409).send({
+          error: 'Conflict',
+          message: 'Group code already exists in your organization'
         });
       }
 
       // Validate assigned employee if provided
       if (body.assignedEmployeeId) {
         const employee = await this.server.prisma.user.findFirst({
-          where: { 
+          where: {
             id: body.assignedEmployeeId,
             organizationId: orgId,
             isActive: true
@@ -54,9 +54,9 @@ export class GroupController {
         });
 
         if (!employee) {
-          return reply.status(400).send({ 
-            error: 'Bad Request', 
-            message: 'Invalid employee ID' 
+          return reply.status(400).send({
+            error: 'Bad Request',
+            message: 'Invalid employee ID'
           });
         }
       }
@@ -118,16 +118,16 @@ export class GroupController {
     } catch (error: any) {
       if (error.name === 'ZodError') {
         const messages = error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
-        return reply.status(400).send({ 
-          error: 'Validation Error', 
+        return reply.status(400).send({
+          error: 'Validation Error',
           message: messages,
-          details: error.errors 
+          details: error.errors
         });
       }
       console.error('Group creation error:', error);
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
       });
     }
   };
@@ -136,12 +136,12 @@ export class GroupController {
     try {
       const orgId = (request as any).organizationId;
       const user = (request as any).user;
-      const { 
-        page = 1, 
-        limit = 20, 
-        search, 
-        isActive, 
-        assignedEmployeeId 
+      const {
+        page = 1,
+        limit = 20,
+        search,
+        isActive,
+        assignedEmployeeId
       } = request.query as any;
 
       const where: any = { organizationId: orgId };
@@ -193,9 +193,9 @@ export class GroupController {
         }
       });
     } catch (error: any) {
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
       });
     }
   };
@@ -205,9 +205,9 @@ export class GroupController {
       const orgId = (request as any).organizationId;
       const user = (request as any).user;
 
-      const where: any = { 
+      const where: any = {
         organizationId: orgId,
-        isActive: true 
+        isActive: true
       };
 
       if (user.role === 'AGENCY_EMPLOYEE') {
@@ -230,9 +230,9 @@ export class GroupController {
 
       return reply.send(groups);
     } catch (error: any) {
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
       });
     }
   };
@@ -276,17 +276,17 @@ export class GroupController {
       });
 
       if (!group) {
-        return reply.status(404).send({ 
-          error: 'Not Found', 
-          message: 'Group not found' 
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Group not found'
         });
       }
 
       return reply.send(group);
     } catch (error: any) {
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
       });
     }
   };
@@ -298,9 +298,9 @@ export class GroupController {
       const { id } = request.params as any;
 
       if (user.role === 'AGENCY_EMPLOYEE') {
-        return reply.status(403).send({ 
-          error: 'Forbidden', 
-          message: 'Only admins can update groups' 
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: 'Only admins can update groups'
         });
       }
 
@@ -311,16 +311,16 @@ export class GroupController {
       });
 
       if (!existing) {
-        return reply.status(404).send({ 
-          error: 'Not Found', 
-          message: 'Group not found' 
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Group not found'
         });
       }
 
       // Validate assigned employee if provided
       if (body.assignedEmployeeId) {
         const employee = await this.server.prisma.user.findFirst({
-          where: { 
+          where: {
             id: body.assignedEmployeeId,
             organizationId: orgId,
             isActive: true
@@ -328,9 +328,9 @@ export class GroupController {
         });
 
         if (!employee) {
-          return reply.status(400).send({ 
-            error: 'Bad Request', 
-            message: 'Invalid employee ID' 
+          return reply.status(400).send({
+            error: 'Bad Request',
+            message: 'Invalid employee ID'
           });
         }
       }
@@ -373,14 +373,14 @@ export class GroupController {
       return reply.send(updated);
     } catch (error: any) {
       if (error.name === 'ZodError') {
-        return reply.status(400).send({ 
-          error: 'Validation Error', 
-          details: error.errors 
+        return reply.status(400).send({
+          error: 'Validation Error',
+          details: error.errors
         });
       }
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
       });
     }
   };
@@ -393,9 +393,9 @@ export class GroupController {
       const { employeeId } = request.body as any;
 
       if (user.role === 'AGENCY_EMPLOYEE') {
-        return reply.status(403).send({ 
-          error: 'Forbidden', 
-          message: 'Only admins can assign employees' 
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: 'Only admins can assign employees'
         });
       }
 
@@ -404,16 +404,16 @@ export class GroupController {
       });
 
       if (!group) {
-        return reply.status(404).send({ 
-          error: 'Not Found', 
-          message: 'Group not found' 
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Group not found'
         });
       }
 
       // Validate employee
       if (employeeId) {
         const employee = await this.server.prisma.user.findFirst({
-          where: { 
+          where: {
             id: employeeId,
             organizationId: orgId,
             isActive: true
@@ -421,9 +421,9 @@ export class GroupController {
         });
 
         if (!employee) {
-          return reply.status(400).send({ 
-            error: 'Bad Request', 
-            message: 'Invalid employee ID' 
+          return reply.status(400).send({
+            error: 'Bad Request',
+            message: 'Invalid employee ID'
           });
         }
       }
@@ -443,14 +443,14 @@ export class GroupController {
         }
       });
 
-      return reply.send({ 
+      return reply.send({
         message: 'Employee assigned successfully',
-        group: updated 
+        group: updated
       });
     } catch (error: any) {
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
       });
     }
   };
@@ -462,9 +462,9 @@ export class GroupController {
       const { id } = request.params as any;
 
       if (user.role === 'AGENCY_EMPLOYEE') {
-        return reply.status(403).send({ 
-          error: 'Forbidden', 
-          message: 'Only admins can archive groups' 
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: 'Only admins can archive groups'
         });
       }
 
@@ -473,9 +473,9 @@ export class GroupController {
       });
 
       if (!group) {
-        return reply.status(404).send({ 
-          error: 'Not Found', 
-          message: 'Group not found' 
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Group not found'
         });
       }
 
@@ -497,14 +497,103 @@ export class GroupController {
         }
       });
 
-      return reply.send({ 
+      return reply.send({
         message: 'Group archived successfully',
-        isActive: updated.isActive 
+        isActive: updated.isActive
       });
     } catch (error: any) {
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
+      });
+    }
+  };
+
+  delete = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const user = (request as any).user;
+      const orgId = (request as any).organizationId;
+      const { id } = request.params as any;
+
+      // Only admins can delete groups
+      if (user.role === 'AGENCY_EMPLOYEE') {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: 'Only admins can delete groups'
+        });
+      }
+
+      const group = await this.server.prisma.group.findFirst({
+        where: { id, organizationId: orgId },
+        include: {
+          _count: {
+            select: { applicants: true }
+          }
+        }
+      });
+
+      if (!group) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Group not found'
+        });
+      }
+
+      // Delete group and all associated data in transaction
+      await this.server.prisma.$transaction(async (tx) => {
+        // Get all applicants in this group
+        const applicants = await tx.applicant.findMany({
+          where: { groupId: id, organizationId: orgId },
+          select: { id: true }
+        });
+
+        const applicantIds = applicants.map(a => a.id);
+
+        // Delete applications for all applicants in this group
+        if (applicantIds.length > 0) {
+          await tx.application.deleteMany({
+            where: {
+              applicantId: { in: applicantIds },
+              organizationId: orgId
+            }
+          });
+        }
+
+        // Delete all applicants in this group
+        await tx.applicant.deleteMany({
+          where: { groupId: id, organizationId: orgId }
+        });
+
+        // Delete the group
+        await tx.group.delete({
+          where: { id }
+        });
+
+        // Audit log
+        await tx.auditLog.create({
+          data: {
+            action: 'DELETE_GROUP',
+            entityType: 'Group',
+            entityId: id,
+            oldValues: {
+              code: group.code,
+              name: group.name,
+              applicantCount: group._count.applicants
+            },
+            userId: user.id,
+            organizationId: orgId
+          }
+        });
+      });
+
+      return reply.send({
+        message: 'Group and all associated data deleted successfully'
+      });
+    } catch (error: any) {
+      console.error('Group delete error:', error);
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
       });
     }
   };

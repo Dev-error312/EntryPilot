@@ -13,10 +13,12 @@ import {
   User,
   Edit,
   Archive,
+  Trash2,
   ArrowRight,
   FolderOpen,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { groupsApi, usersApi } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { format } from 'date-fns';
@@ -45,6 +47,13 @@ export default function GroupsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; groupId: string; groupName: string }>({
+    open: false,
+    groupId: '',
+    groupName: '',
+  });
 
   useEffect(() => {
     loadGroups();
@@ -61,6 +70,41 @@ export default function GroupsPage() {
     }
   };
 
+  const openDeleteModal = (id: string, name: string) => {
+    setDeleteModal({ open: true, groupId: id, groupName: name });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ open: false, groupId: '', groupName: '' });
+  };
+
+  const confirmDeleteGroup = async () => {
+    const { groupId } = deleteModal;
+    closeDeleteModal();
+    setDeleting(groupId);
+    setError(null);
+    try {
+      await groupsApi.delete(groupId);
+      loadGroups();
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Failed to delete group';
+      setError(errorMsg);
+      console.error('Failed to delete group:', error);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const archiveGroup = async (id: string) => {
+    try {
+      await groupsApi.archive(id);
+      loadGroups();
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Failed to archive group';
+      setError(errorMsg);
+    }
+  };
+
   const filteredGroups = groups.filter(
     (group) =>
       group.code.toLowerCase().includes(search.toLowerCase()) ||
@@ -70,6 +114,14 @@ export default function GroupsPage() {
   return (
     <DashboardLayout title="Groups" subtitle="Manage travel groups and batches">
       <div className="space-y-6">
+        {/* Error Alert */}
+        {error && (
+          <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-600 hover:text-red-700">✕</button>
+          </div>
+        )}
+
         {/* Header Actions */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 flex-1">
@@ -114,19 +166,12 @@ export default function GroupsPage() {
         ) : filteredGroups.length === 0 ? (
           <div className="text-center py-12">
             <FolderOpen className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-1">
-              No groups found
-            </h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">No groups found</h3>
             <p className="text-gray-500 mb-4">
-              {search
-                ? 'Try adjusting your search'
-                : 'Create your first group to get started'}
+              {search ? 'Try adjusting your search' : 'Create your first group to get started'}
             </p>
             {!search && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="btn-primary"
-              >
+              <button onClick={() => setShowCreateModal(true)} className="btn-primary">
                 Create Group
               </button>
             )}
@@ -140,66 +185,93 @@ export default function GroupsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
               >
-                <Link href={`/groups/${group.id}`}>
-                  <div className="card card-hover p-5 cursor-pointer">
-                    <div className="flex items-start justify-between mb-3">
-                      <span className="badge badge-blue font-mono">
-                        {group.code}
-                      </span>
-                      <button className="p-1 rounded hover:bg-gray-100">
-                        <MoreVertical className="w-4 h-4 text-gray-400" />
+                <div className="card card-hover p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="badge badge-blue font-mono">{group.code}</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => archiveGroup(group.id)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                        title="Archive group"
+                      >
+                        <Archive className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openDeleteModal(group.id, group.name)}
+                        disabled={deleting === group.id}
+                        className={clsx(
+                          'p-1.5 rounded-lg transition-colors',
+                          deleting === group.id
+                            ? 'text-gray-300 cursor-not-allowed'
+                            : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                        )}
+                        title="Delete group"
+                      >
+                        {deleting === group.id ? (
+                          <div className="w-4 h-4 border-2 border-gray-300 border-t-red-600 rounded-full animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
                       </button>
                     </div>
-                    <h3 className="font-medium text-gray-900 mb-3">
-                      {group.name}
-                    </h3>
-                    <div className="space-y-2 text-sm text-gray-500">
-                      {group.travelDate && (
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          {format(new Date(group.travelDate), 'MMM d, yyyy')}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4" />
-                        {group._count.applicants} applicants
-                      </div>
-                      {group.assignedEmployee && (
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4" />
-                          {group.assignedEmployee.firstName}{' '}
-                          {group.assignedEmployee.lastName}
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-gray-100 flex items-center 
-                                  justify-between">
-                      <span className="text-xs text-gray-400">
-                        Created {format(new Date(group.createdAt), 'MMM d, yyyy')}
-                      </span>
-                      <span className="text-sm text-gray-600 flex items-center gap-1 
-                                     group-hover:text-gray-900">
-                        View
-                        <ArrowRight className="w-4 h-4" />
-                      </span>
-                    </div>
                   </div>
-                </Link>
+                  <Link href={`/groups/${group.id}`}>
+                    <h3 className="font-medium text-gray-900 mb-3 hover:text-gray-600">{group.name}</h3>
+                  </Link>
+                  <div className="space-y-2 text-sm text-gray-500">
+                    {group.travelDate && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        {format(new Date(group.travelDate), 'MMM d, yyyy')}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      {group._count.applicants} applicants
+                    </div>
+                    {group.assignedEmployee && (
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        {group.assignedEmployee.firstName} {group.assignedEmployee.lastName}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                    <span className="text-xs text-gray-400">
+                      Created {format(new Date(group.createdAt), 'MMM d, yyyy')}
+                    </span>
+                    <Link href={`/groups/${group.id}`} className="text-sm text-gray-600 flex items-center gap-1 hover:text-gray-900">
+                      View
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
         )}
-      </div>
 
-      {/* Create Modal */}
-      <CreateGroupModal
-        open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={() => {
-          setShowCreateModal(false);
-          loadGroups();
-        }}
-      />
+        {/* Create Modal */}
+        <CreateGroupModal
+          open={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => {
+            setShowCreateModal(false);
+            loadGroups();
+          }}
+        />
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmDeleteModal
+          open={deleteModal.open}
+          title="Delete Group"
+          description="This will permanently delete this group and all associated applicants and applications."
+          itemName={deleteModal.groupName}
+          isLoading={deleting === deleteModal.groupId}
+          onConfirm={confirmDeleteGroup}
+          onCancel={closeDeleteModal}
+        />
+      </div>
     </DashboardLayout>
   );
 }
@@ -232,7 +304,6 @@ function CreateGroupModal({
   }, [open]);
 
   const handleClose = () => {
-    // Reset form when closing
     setFormData({
       code: '',
       name: '',
@@ -260,7 +331,6 @@ function CreateGroupModal({
     setError('');
 
     try {
-      // Validate required fields
       if (!formData.code.trim()) {
         setError('Group Code is required');
         setLoading(false);
@@ -272,7 +342,6 @@ function CreateGroupModal({
         return;
       }
 
-      // Get user and organizationId from auth store
       const { user } = useAuthStore.getState();
       if (!user?.organizationId) {
         setError('Organization not found. Please log in again.');
@@ -280,14 +349,12 @@ function CreateGroupModal({
         return;
       }
 
-      // Convert empty strings to null/undefined for optional fields
       const payload: any = {
         code: formData.code.trim(),
         name: formData.name.trim(),
         organizationId: user.organizationId,
       };
 
-      // Only add optional fields if they have values
       if (formData.travelDate) {
         payload.travelDate = new Date(formData.travelDate).toISOString();
       }
@@ -301,10 +368,8 @@ function CreateGroupModal({
         payload.assignedEmployeeId = formData.assignedEmployeeId;
       }
 
-      console.log('Submitting payload:', payload);
       await groupsApi.create(payload);
-      
-      // Reset form
+
       setFormData({
         code: '',
         name: '',
@@ -313,10 +378,9 @@ function CreateGroupModal({
         notes: '',
         assignedEmployeeId: '',
       });
-      
+
       onSuccess();
     } catch (err: any) {
-      console.error('Create group error:', err.response?.data || err.message);
       const errorMsg = err.response?.data?.message || err.response?.data?.details?.[0]?.message || 'Failed to create group';
       setError(errorMsg);
     } finally {
@@ -341,65 +405,46 @@ function CreateGroupModal({
             exit={{ opacity: 0, scale: 0.95 }}
             className="fixed inset-0 flex items-center justify-center z-50 p-4"
           >
-            <div className="bg-white rounded-xl border border-gray-200 shadow-xl 
-                          w-full max-w-lg overflow-hidden">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-lg overflow-hidden">
               <div className="p-6 border-b border-gray-100">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Create New Group
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Add a new travel group or batch
-                </p>
+                <h2 className="text-lg font-semibold text-gray-900">Create New Group</h2>
+                <p className="text-sm text-gray-500 mt-1">Add a new travel group or batch</p>
               </div>
 
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 {error && (
-                  <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm">
-                    {error}
-                  </div>
+                  <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm">{error}</div>
                 )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Group Code *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Group Code *</label>
                     <input
                       type="text"
                       value={formData.code}
-                      onChange={(e) =>
-                        setFormData({ ...formData, code: e.target.value.toUpperCase() })
-                      }
+                      onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                       className="input"
                       placeholder="KMY2026-AUG"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Travel Date
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Travel Date</label>
                     <input
                       type="date"
                       value={formData.travelDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, travelDate: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, travelDate: e.target.value })}
                       className="input"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Group Name *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Group Name *</label>
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="input"
                     placeholder="Kailash August Full Moon Batch"
                     required
@@ -407,29 +452,21 @@ function CreateGroupModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    External Agent
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">External Agent</label>
                   <input
                     type="text"
                     value={formData.externalAgent}
-                    onChange={(e) =>
-                      setFormData({ ...formData, externalAgent: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, externalAgent: e.target.value })}
                     className="input"
                     placeholder="Agent or partner name"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Assign Employee
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Assign Employee</label>
                   <select
                     value={formData.assignedEmployeeId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, assignedEmployeeId: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, assignedEmployeeId: e.target.value })}
                     className="input"
                   >
                     <option value="">Select employee</option>
@@ -442,32 +479,18 @@ function CreateGroupModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Notes
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes</label>
                   <textarea
                     value={formData.notes}
-                    onChange={(e) =>
-                      setFormData({ ...formData, notes: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     className="input min-h-[80px]"
                     placeholder="Additional notes..."
                   />
                 </div>
 
                 <div className="flex items-center gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="btn-secondary flex-1"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="btn-primary flex-1"
-                  >
+                  <button type="button" onClick={handleClose} className="btn-secondary flex-1">Cancel</button>
+                  <button type="submit" disabled={loading} className="btn-primary flex-1">
                     {loading ? 'Creating...' : 'Create Group'}
                   </button>
                 </div>

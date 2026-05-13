@@ -14,8 +14,10 @@ import {
   Mail,
   Phone,
   Globe,
+  Trash2,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
 import { applicantsApi, groupsApi } from '@/lib/api';
 import clsx from 'clsx';
 
@@ -49,6 +51,13 @@ export default function ApplicantsPage() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; applicantId: string; applicantName: string }>({
+    open: false,
+    applicantId: '',
+    applicantName: '',
+  });
 
   useEffect(() => {
     loadApplicants();
@@ -81,6 +90,31 @@ export default function ApplicantsPage() {
     });
   };
 
+  const openDeleteModal = (id: string, name: string) => {
+    setDeleteModal({ open: true, applicantId: id, applicantName: name });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ open: false, applicantId: '', applicantName: '' });
+  };
+
+  const confirmDeleteApplicant = async () => {
+    const { applicantId } = deleteModal;
+    closeDeleteModal();
+    setDeleting(applicantId);
+    setError(null);
+    try {
+      await applicantsApi.delete(applicantId);
+      loadApplicants();
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Failed to delete applicant';
+      setError(errorMsg);
+      console.error('Failed to delete applicant:', error);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   const filteredGroups = groups
     .map((group) => ({
       ...group,
@@ -99,11 +133,16 @@ export default function ApplicantsPage() {
     );
 
   return (
-    <DashboardLayout 
-      title="Applicants" 
-      subtitle="Manage travelers grouped by batch"
-    >
+    <DashboardLayout title="Applicants" subtitle="Manage travelers grouped by batch">
       <div className="space-y-6">
+        {/* Error Alert */}
+        {error && (
+          <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-600 hover:text-red-700">✕</button>
+          </div>
+        )}
+
         {/* Header Actions */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 flex-1">
@@ -147,19 +186,12 @@ export default function ApplicantsPage() {
         ) : filteredGroups.length === 0 ? (
           <div className="text-center py-12">
             <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-1">
-              No applicants found
-            </h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">No applicants found</h3>
             <p className="text-gray-500 mb-4">
-              {search
-                ? 'Try adjusting your search'
-                : 'Add your first applicant to get started'}
+              {search ? 'Try adjusting your search' : 'Add your first applicant to get started'}
             </p>
             {!search && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="btn-primary"
-              >
+              <button onClick={() => setShowCreateModal(true)} className="btn-primary">
                 Add Applicant
               </button>
             )}
@@ -175,10 +207,9 @@ export default function ApplicantsPage() {
                 className="card overflow-hidden"
               >
                 {/* Group Header */}
-                <div
+                <button
                   onClick={() => toggleGroup(group.id)}
-                  className="w-full p-4 flex items-center justify-between 
-                           hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
                 >
                   <div className="flex items-center gap-3">
                     {expandedGroups.has(group.id) ? (
@@ -188,19 +219,13 @@ export default function ApplicantsPage() {
                     )}
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="badge badge-blue font-mono">
-                          {group.code}
-                        </span>
-                        <span className="font-medium text-gray-900">
-                          {group.name}
-                        </span>
+                        <span className="badge badge-blue font-mono">{group.code}</span>
+                        <span className="font-medium text-gray-900">{group.name}</span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-500">
-                      {group._count.applicants} applicants
-                    </span>
+                    <span className="text-sm text-gray-500">{group._count.applicants} applicants</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -213,7 +238,7 @@ export default function ApplicantsPage() {
                       Add
                     </button>
                   </div>
-                </div>
+                </button>
 
                 {/* Applicants List */}
                 <AnimatePresence>
@@ -226,96 +251,87 @@ export default function ApplicantsPage() {
                     >
                       {group.applicants.length === 0 ? (
                         <div className="px-4 py-8 text-center border-t border-gray-100">
-                          <p className="text-gray-500">
-                            No applicants in this group yet
-                          </p>
+                          <p className="text-gray-500">No applicants in this group yet</p>
                         </div>
                       ) : (
-                        <div className="border-t border-gray-100 overflow-x-auto">
-                          <table className="w-full table-fixed">
-                            <colgroup>
-                              <col style={{ width: '25%' }} />
-                              <col style={{ width: '20%' }} />
-                              <col style={{ width: '20%' }} />
-                              <col style={{ width: '15%' }} />
-                              <col style={{ width: '10%' }} />
-                              <col style={{ width: '10%' }} />
-                            </colgroup>
+                        <div className="border-t border-gray-100">
+                          <table className="table">
                             <thead>
-                              <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="text-left py-3 px-4 font-medium text-gray-700">Name</th>
-                                <th className="text-left py-3 px-4 font-medium text-gray-700">Passport</th>
-                                <th className="text-left py-3 px-4 font-medium text-gray-700">Nationality</th>
-                                <th className="text-left py-3 px-4 font-medium text-gray-700">Contact</th>
-                                <th className="text-center py-3 px-4 font-medium text-gray-700">Apps</th>
-                                <th className="text-center py-3 px-4 font-medium text-gray-700">Actions</th>
+                              <tr>
+                                <th>Name</th>
+                                <th>Passport</th>
+                                <th>Nationality</th>
+                                <th>Contact</th>
+                                <th>Apps</th>
+                                <th>Actions</th>
                               </tr>
                             </thead>
                             <tbody>
                               {group.applicants.map((applicant) => (
-                                <tr
-                                  key={applicant.id}
-                                  className="border-b border-gray-100 hover:bg-gray-50"
-                                >
-                                  <td className="py-3 px-4 truncate">
+                                <tr key={applicant.id}>
+                                  <td>
                                     <Link
                                       href={`/applicants/${applicant.id}`}
-                                      className="font-medium text-gray-900 
-                                               hover:text-blue-600"
+                                      className="font-medium text-gray-900 hover:text-gray-600"
                                     >
                                       {applicant.firstName} {applicant.lastName}
                                     </Link>
                                   </td>
-                                  <td className="py-3 px-4 font-mono text-sm text-gray-600 truncate">
-                                    {applicant.passportNumber || '-'}
+                                  <td>
+                                    <span className="font-mono text-sm text-gray-600">
+                                      {applicant.passportNumber || '-'}
+                                    </span>
                                   </td>
-                                  <td className="py-3 px-4 truncate">
+                                  <td>
                                     {applicant.nationality ? (
                                       <span className="flex items-center gap-1.5">
-                                        <Globe className="w-4 h-4 flex-shrink-0 text-gray-400" />
-                                        <span className="truncate">{applicant.nationality}</span>
+                                        <Globe className="w-4 h-4 text-gray-400" />
+                                        {applicant.nationality}
                                       </span>
                                     ) : (
-                                      <span className="text-gray-400">-</span>
+                                      '-'
                                     )}
                                   </td>
-                                  <td className="py-3 px-4">
+                                  <td>
                                     <div className="flex items-center gap-2">
                                       {applicant.email && (
-                                        <a
-                                          href={`mailto:${applicant.email}`}
-                                          className="p-1 rounded hover:bg-gray-200 transition-colors flex-shrink-0"
-                                          title={applicant.email}
-                                        >
-                                          <Mail className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                                        <a href={`mailto:${applicant.email}`} className="p-1 rounded hover:bg-gray-100" title={applicant.email}>
+                                          <Mail className="w-4 h-4 text-gray-400" />
                                         </a>
                                       )}
                                       {applicant.phone && (
-                                        <a
-                                          href={`tel:${applicant.phone}`}
-                                          className="p-1 rounded hover:bg-gray-200 transition-colors flex-shrink-0"
-                                          title={applicant.phone}
-                                        >
-                                          <Phone className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                                        <a href={`tel:${applicant.phone}`} className="p-1 rounded hover:bg-gray-100" title={applicant.phone}>
+                                          <Phone className="w-4 h-4 text-gray-400" />
                                         </a>
-                                      )}
-                                      {!applicant.email && !applicant.phone && (
-                                        <span className="text-gray-400">-</span>
                                       )}
                                     </div>
                                   </td>
-                                  <td className="py-3 px-4 text-center">
-                                    <span className="inline-block px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
-                                      {applicant._count.applications}
-                                    </span>
+                                  <td>
+                                    <span className="badge badge-gray">{applicant._count.applications}</span>
                                   </td>
-                                  <td className="py-3 px-4 text-center">
-                                    <Link
-                                      href={`/applicants/${applicant.id}`}
-                                      className="text-blue-600 hover:text-blue-800 font-medium text-sm"
-                                    >
-                                      View
-                                    </Link>
+                                  <td>
+                                    <div className="flex items-center gap-1">
+                                      <Link href={`/applicants/${applicant.id}`} className="btn-ghost text-sm">
+                                        View
+                                      </Link>
+                                      <button
+                                        onClick={() => openDeleteModal(applicant.id, `${applicant.firstName} ${applicant.lastName}`)}
+                                        disabled={deleting === applicant.id}
+                                        className={clsx(
+                                          'p-1.5 rounded-lg transition-colors',
+                                          deleting === applicant.id
+                                            ? 'text-gray-300 cursor-not-allowed'
+                                            : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                                        )}
+                                        title="Delete applicant"
+                                      >
+                                        {deleting === applicant.id ? (
+                                          <div className="w-4 h-4 border-2 border-gray-300 border-t-red-600 rounded-full animate-spin" />
+                                        ) : (
+                                          <Trash2 className="w-4 h-4" />
+                                        )}
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               ))}
@@ -330,23 +346,34 @@ export default function ApplicantsPage() {
             ))}
           </div>
         )}
-      </div>
 
-      {/* Create Modal */}
-      <CreateApplicantModal
-        open={showCreateModal}
-        onClose={() => {
-          setShowCreateModal(false);
-          setSelectedGroupId(null);
-        }}
-        defaultGroupId={selectedGroupId}
-        groups={groups}
-        onSuccess={() => {
-          setShowCreateModal(false);
-          setSelectedGroupId(null);
-          loadApplicants();
-        }}
-      />
+        {/* Create Modal */}
+        <CreateApplicantModal
+          open={showCreateModal}
+          onClose={() => {
+            setShowCreateModal(false);
+            setSelectedGroupId(null);
+          }}
+          defaultGroupId={selectedGroupId}
+          groups={groups}
+          onSuccess={() => {
+            setShowCreateModal(false);
+            setSelectedGroupId(null);
+            loadApplicants();
+          }}
+        />
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmDeleteModal
+          open={deleteModal.open}
+          title="Delete Applicant"
+          description="This will permanently delete this applicant and all associated applications."
+          itemName={deleteModal.applicantName}
+          isLoading={deleting === deleteModal.applicantId}
+          onConfirm={confirmDeleteApplicant}
+          onCancel={closeDeleteModal}
+        />
+      </div>
     </DashboardLayout>
   );
 }
@@ -391,7 +418,6 @@ function CreateApplicantModal({
     setError('');
 
     try {
-      // Validate required fields
       if (!formData.firstName.trim()) {
         setError('First Name is required');
         setLoading(false);
@@ -408,41 +434,22 @@ function CreateApplicantModal({
         return;
       }
 
-      // Build payload with proper date formatting
       const data: any = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         groupId: formData.groupId,
       };
 
-      // Add optional fields only if they have values
-      if (formData.email?.trim()) {
-        data.email = formData.email.trim();
-      }
-      if (formData.phone?.trim()) {
-        data.phone = formData.phone.trim();
-      }
-      if (formData.dob) {
-        // Convert date string to ISO datetime
-        data.dob = new Date(formData.dob).toISOString();
-      }
-      if (formData.gender) {
-        data.gender = formData.gender;
-      }
-      if (formData.nationality?.trim()) {
-        data.nationality = formData.nationality.trim();
-      }
-      if (formData.passportNumber?.trim()) {
-        data.passportNumber = formData.passportNumber.trim();
-      }
-      if (formData.passportExpiry) {
-        // Convert date string to ISO datetime
-        data.passportExpiry = new Date(formData.passportExpiry).toISOString();
-      }
+      if (formData.email?.trim()) data.email = formData.email.trim();
+      if (formData.phone?.trim()) data.phone = formData.phone.trim();
+      if (formData.dob) data.dob = new Date(formData.dob).toISOString();
+      if (formData.gender) data.gender = formData.gender;
+      if (formData.nationality?.trim()) data.nationality = formData.nationality.trim();
+      if (formData.passportNumber?.trim()) data.passportNumber = formData.passportNumber.trim();
+      if (formData.passportExpiry) data.passportExpiry = new Date(formData.passportExpiry).toISOString();
 
-      console.log('Submitting applicant:', data);
       await applicantsApi.create(data);
-      
+
       setFormData({
         firstName: '',
         lastName: '',
@@ -457,7 +464,6 @@ function CreateApplicantModal({
       });
       onSuccess();
     } catch (err: any) {
-      console.error('Create applicant error:', err.response?.data || err.message);
       const errorMsg = err.response?.data?.message || err.response?.data?.details?.[0]?.message || 'Failed to create applicant';
       setError(errorMsg);
     } finally {
@@ -482,33 +488,22 @@ function CreateApplicantModal({
             exit={{ opacity: 0, scale: 0.95 }}
             className="fixed inset-0 flex items-center justify-center z-50 p-4"
           >
-            <div className="bg-white rounded-xl border border-gray-200 shadow-xl 
-                          w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
               <div className="p-6 border-b border-gray-100">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Add New Applicant
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Enter applicant details
-                </p>
+                <h2 className="text-lg font-semibold text-gray-900">Add New Applicant</h2>
+                <p className="text-sm text-gray-500 mt-1">Enter applicant details</p>
               </div>
 
               <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
                 {error && (
-                  <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm">
-                    {error}
-                  </div>
+                  <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm">{error}</div>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Group *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Group *</label>
                   <select
                     value={formData.groupId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, groupId: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, groupId: e.target.value })}
                     className="input"
                     required
                   >
@@ -523,29 +518,21 @@ function CreateApplicantModal({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      First Name *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">First Name *</label>
                     <input
                       type="text"
                       value={formData.firstName}
-                      onChange={(e) =>
-                        setFormData({ ...formData, firstName: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                       className="input"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Last Name *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Last Name *</label>
                     <input
                       type="text"
                       value={formData.lastName}
-                      onChange={(e) =>
-                        setFormData({ ...formData, lastName: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                       className="input"
                       required
                     />
@@ -554,28 +541,20 @@ function CreateApplicantModal({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Email
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                     <input
                       type="email"
                       value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       className="input"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Phone
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
                     <input
                       type="tel"
                       value={formData.phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       className="input"
                     />
                   </div>
@@ -583,27 +562,19 @@ function CreateApplicantModal({
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Date of Birth
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Date of Birth</label>
                     <input
                       type="date"
                       value={formData.dob}
-                      onChange={(e) =>
-                        setFormData({ ...formData, dob: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
                       className="input"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Gender
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Gender</label>
                     <select
                       value={formData.gender}
-                      onChange={(e) =>
-                        setFormData({ ...formData, gender: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                       className="input"
                     >
                       <option value="">Select</option>
@@ -613,15 +584,11 @@ function CreateApplicantModal({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Nationality
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Nationality</label>
                     <input
                       type="text"
                       value={formData.nationality}
-                      onChange={(e) =>
-                        setFormData({ ...formData, nationality: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
                       className="input"
                     />
                   </div>
@@ -629,46 +596,28 @@ function CreateApplicantModal({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Passport Number
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Passport Number</label>
                     <input
                       type="text"
                       value={formData.passportNumber}
-                      onChange={(e) =>
-                        setFormData({ ...formData, passportNumber: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, passportNumber: e.target.value })}
                       className="input"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Passport Expiry
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Passport Expiry</label>
                     <input
                       type="date"
                       value={formData.passportExpiry}
-                      onChange={(e) =>
-                        setFormData({ ...formData, passportExpiry: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, passportExpiry: e.target.value })}
                       className="input"
                     />
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="btn-secondary flex-1"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="btn-primary flex-1"
-                  >
+                  <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
+                  <button type="submit" disabled={loading} className="btn-primary flex-1">
                     {loading ? 'Adding...' : 'Add Applicant'}
                   </button>
                 </div>
