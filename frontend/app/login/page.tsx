@@ -182,7 +182,7 @@ export default function LoginPage() {
           <div className="mt-8 p-4 rounded-xl bg-gray-50 border border-gray-100">
             <p className="text-sm font-medium text-gray-700 mb-2">Demo Credentials</p>
             <div className="space-y-1.5 text-sm text-gray-600">
-              <p><span className="font-medium">Super Admin:</span> super@visaflow.com / admin123</p>
+              <p><span className="font-medium">Super Admin:</span> super@entrypilot.com / admin123</p>
               <p><span className="font-medium">Agency Admin:</span> admin@demo.com / admin123</p>
               <p><span className="font-medium">Employee:</span> employee@demo.com / employee123</p>
             </div>

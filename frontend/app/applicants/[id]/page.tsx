@@ -177,7 +177,7 @@ export default function ApplicantDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {applicant.dob && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   Date of Birth
                 </label>
@@ -189,7 +189,7 @@ export default function ApplicantDetailPage() {
 
             {applicant.gender && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                   <User className="w-4 h-4" />
                   Gender
                 </label>
@@ -199,7 +199,7 @@ export default function ApplicantDetailPage() {
 
             {applicant.nationality && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                   <Globe className="w-4 h-4" />
                   Nationality
                 </label>
@@ -209,7 +209,7 @@ export default function ApplicantDetailPage() {
 
             {applicant.email && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                   <Mail className="w-4 h-4" />
                   Email
                 </label>
@@ -221,7 +221,7 @@ export default function ApplicantDetailPage() {
 
             {applicant.phone && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                   <Phone className="w-4 h-4" />
                   Phone
                 </label>
@@ -233,7 +233,7 @@ export default function ApplicantDetailPage() {
 
             {applicant.address && (
               <div className="lg:col-span-2">
-                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                   <FileText className="w-4 h-4" />
                   Address
                 </label>
@@ -243,7 +243,7 @@ export default function ApplicantDetailPage() {
 
             {applicant.city && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                   <Globe className="w-4 h-4" />
                   City
                 </label>
@@ -253,7 +253,7 @@ export default function ApplicantDetailPage() {
 
             {applicant.country && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                   <Globe className="w-4 h-4" />
                   Country
                 </label>
@@ -278,7 +278,7 @@ export default function ApplicantDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {applicant.passportNumber && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                   <CreditCard className="w-4 h-4" />
                   Passport Number
                 </label>
@@ -290,7 +290,7 @@ export default function ApplicantDetailPage() {
 
             {applicant.passportIssue && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   Issue Date
                 </label>
@@ -302,7 +302,7 @@ export default function ApplicantDetailPage() {
 
             {applicant.passportExpiry && (
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   Expiry Date
                 </label>
@@ -328,14 +328,14 @@ export default function ApplicantDetailPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 Group Code
               </label>
               <p className="text-lg font-mono text-gray-900">{applicant.group.code}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 Group Name
               </label>
