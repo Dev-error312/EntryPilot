@@ -202,13 +202,16 @@ export default function TeamPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => toggleMember(member.id)}
+                        disabled={member.role === 'AGENCY_ADMIN' || member.role === 'SUPER_ADMIN'}
                         className={clsx(
                           'p-1.5 rounded-lg transition-colors',
-                          member.isActive
+                          (member.role === 'AGENCY_ADMIN' || member.role === 'SUPER_ADMIN')
+                            ? 'text-gray-300 cursor-not-allowed'
+                            : member.isActive
                             ? 'text-green-600 hover:bg-green-50'
                             : 'text-red-600 hover:bg-red-50'
                         )}
-                        title={member.isActive ? 'Deactivate' : 'Activate'}
+                        title={(member.role === 'AGENCY_ADMIN' || member.role === 'SUPER_ADMIN') ? 'Cannot toggle admin users' : (member.isActive ? 'Deactivate' : 'Activate')}
                       >
                         {member.isActive ? (
                           <ToggleRight className="w-5 h-5" />
@@ -218,14 +221,14 @@ export default function TeamPage() {
                       </button>
                       <button
                         onClick={() => deleteMember(member.id, `${member.firstName} ${member.lastName}`)}
-                        disabled={deleting === member.id}
+                        disabled={deleting === member.id || member.role === 'AGENCY_ADMIN' || member.role === 'SUPER_ADMIN'}
                         className={clsx(
                           'p-1.5 rounded-lg transition-colors',
-                          deleting === member.id
+                          (member.role === 'AGENCY_ADMIN' || member.role === 'SUPER_ADMIN') || deleting === member.id
                             ? 'text-gray-300 cursor-not-allowed'
                             : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
                         )}
-                        title="Delete member"
+                        title={(member.role === 'AGENCY_ADMIN' || member.role === 'SUPER_ADMIN') ? 'Cannot delete admin users' : 'Delete member'}
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
