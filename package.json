@@ -18,7 +18,16 @@
     "db:seed": "cd backend && npm run db:seed",
     "db:studio": "cd backend && npm run db:studio"
   },
-  "keywords": ["visa", "saas", "processing", "travel", "immigration"],
+  "keywords": [
+    "visa",
+    "saas",
+    "processing",
+    "travel",
+    "immigration"
+  ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
 }
