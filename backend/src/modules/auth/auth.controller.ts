@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AuthService } from './auth.service';
+import { RegisterService } from './register.service';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -7,12 +8,36 @@ const loginSchema = z.object({
   password: z.string().min(6)
 });
 
+const registerSchema = z.object({
+  organizationName: z.string().min(2).max(100),
+  organizationCode: z.string().min(2).max(20).regex(/^[A-Z0-9-]+$/),
+  email: z.string().email(),
+  password: z.string().min(8), // strength checked in service
+  firstName: z.string().min(1).max(50),
+  lastName: z.string().min(1).max(50)
+});
+
 export class AuthController {
   private service: AuthService;
+  private registerService: RegisterService;
 
   constructor(private server: FastifyInstance) {
     this.service = new AuthService(server);
+    this.registerService = new RegisterService(server);
   }
+
+  register = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const body = registerSchema.parse(request.body);
+      const result = await this.registerService.registerOrganization(body as any);
+      return reply.status(201).send(result);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return reply.status(400).send({ error: 'Validation Error', details: error.errors });
+      }
+      return reply.status(400).send({ error: 'Registration Failed', message: error.message });
+    }
+  };
 
   login = async (request: FastifyRequest, reply: FastifyReply) => {
     try {

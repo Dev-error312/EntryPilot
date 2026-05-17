@@ -71,9 +71,36 @@ export class AuthService {
   }
 
   async logout(token: string) {
-    await this.server.prisma.session.deleteMany({
-      where: { token }
-    });
+    // Try to decode token to get expiry and user id
+    let expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    let userId: string | null = null;
+    try {
+      const decoded = this.server.jwt.decode(token) as any;
+      if (decoded && decoded.exp) {
+        expiresAt = new Date(decoded.exp * 1000);
+      }
+      if (decoded && decoded.id) {
+        userId = decoded.id;
+      }
+    } catch (err) {
+      // ignore decode errors
+    }
+
+    // Add token to blacklist
+    try {
+      await (this.server.prisma as any).tokenBlacklist.create({
+        data: {
+          token,
+          userId,
+          expiresAt
+        }
+      });
+    } catch (err) {
+      // ignore if blacklist creation fails
+    }
+
+    // Remove any active session entries
+    await this.server.prisma.session.deleteMany({ where: { token } });
   }
 
   async refresh(refreshToken: string) {

@@ -31,7 +31,9 @@ async function bootstrap() {
   });
 
   await server.register(jwt, {
-    secret: process.env.JWT_SECRET || 'visaflow-super-secret-key-2024'
+    secret: process.env.JWT_SECRET || (() => {
+      throw new Error('JWT_SECRET environment variable is required');
+    })()
   });
 
   await server.register(multipart, {
@@ -67,8 +69,9 @@ async function bootstrap() {
 
   // Start server
   try {
-    const address = await server.listen({ port: 4000, host: '0.0.0.0' });
-    console.log(`🚀 VisaFlow API running at ${address}`);
+    const port = parseInt(process.env.PORT || '4000', 10);
+    const address = await server.listen({ port, host: '0.0.0.0' });
+    console.log(`🚀 EntryPilot API running at ${address}`);
   } catch (err) {
     server.log.error(err);
     process.exit(1);

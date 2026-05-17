@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { validatePasswordStrength } from '../../utils/password.validator';
 
 const createUserSchema = z.object({
   email: z.string().email(),
@@ -35,6 +36,12 @@ export class UserController {
       }
 
       const body = createUserSchema.parse(request.body);
+
+      // Validate password strength
+      const pwdValidation = validatePasswordStrength(body.password);
+      if (!pwdValidation.valid) {
+        return reply.status(400).send({ error: 'Validation Error', message: pwdValidation.errors.join('; ') });
+      }
 
       // Check seat limit
       const org = await this.server.prisma.organization.findUnique({

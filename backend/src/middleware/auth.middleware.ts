@@ -13,6 +13,18 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
 
     const decoded = request.server.jwt.verify(token) as any;
     
+    // Check if token is blacklisted
+    const blacklisted = await (request.server.prisma as any).tokenBlacklist.findUnique({
+      where: { token }
+    });
+
+    if (blacklisted) {
+      return reply.status(401).send({
+        error: 'Unauthorized',
+        message: 'Token has been revoked'
+      });
+    }
+    
     // Check if session exists and is valid
     const session = await request.server.prisma.session.findUnique({
       where: { token },
