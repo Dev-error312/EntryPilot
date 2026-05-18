@@ -4,18 +4,18 @@ import { z } from 'zod';
 const createApplicantSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Invalid email format').optional(),
-  phone: z.string().optional(),
-  dob: z.string().datetime().optional(),
-  gender: z.string().optional(),
-  nationality: z.string().optional(),
-  passportNumber: z.string().optional(),
-  passportExpiry: z.string().datetime().optional(),
-  passportIssue: z.string().datetime().optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  country: z.string().optional(),
-  notes: z.string().optional(),
+  email: z.string().email('Invalid email format').optional().nullable(),
+  phone: z.string().optional().nullable(),
+  dob: z.string().datetime().optional().nullable(),
+  gender: z.string().optional().nullable(),
+  nationality: z.string().optional().nullable(),
+  passportNumber: z.string().min(1, 'Passport number must be at least 1 character').optional().nullable(),
+  passportExpiry: z.string().datetime().optional().nullable(),
+  passportIssue: z.string().datetime().optional().nullable(),
+  address: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  country: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
   groupId: z.string().min(1, 'Group is required'),
   documents: z.any().optional()
 });
@@ -28,7 +28,7 @@ const updateApplicantSchema = z.object({
   dob: z.string().datetime().optional().nullable(),
   gender: z.string().optional().nullable(),
   nationality: z.string().optional().nullable(),
-  passportNumber: z.string().optional().nullable(),
+  passportNumber: z.string().min(1).optional().nullable(),
   passportExpiry: z.string().datetime().optional().nullable(),
   passportIssue: z.string().datetime().optional().nullable(),
   address: z.string().optional().nullable(),
@@ -42,6 +42,79 @@ const updateApplicantSchema = z.object({
 export class ApplicantController {
   constructor(private server: FastifyInstance) {}
 
+  /**
+   * Helper: Check if passport number already exists in organization
+   * Exclude current applicant ID if updating
+   */
+  private async checkDuplicatePassport(
+    passportNumber: string,
+    organizationId: string,
+    excludeApplicantId?: string
+  ): Promise<boolean> {
+    if (!passportNumber) return false; // Passport optional
+
+    const where: any = {
+      passportNumber: { equals: passportNumber, mode: 'insensitive' },
+      organizationId,
+      isActive: true
+    };
+
+    if (excludeApplicantId) {
+      where.id = { not: excludeApplicantId };
+    }
+
+    const existing = await this.server.prisma.applicant.findFirst({ where });
+    return !!existing;
+  }
+
+  /**
+   * Helper: Check if email already exists in organization
+   * Exclude current applicant ID if updating
+   */
+  private async checkDuplicateEmail(
+    email: string,
+    organizationId: string,
+    excludeApplicantId?: string
+  ): Promise<boolean> {
+    if (!email) return false; // Email optional
+
+    const where: any = {
+      email: { equals: email, mode: 'insensitive' },
+      organizationId,
+      isActive: true
+    };
+
+    if (excludeApplicantId) {
+      where.id = { not: excludeApplicantId };
+    }
+
+    const existing = await this.server.prisma.applicant.findFirst({ where });
+    return !!existing;
+  }
+
+  /**
+   * Helper: Handle Prisma errors
+   */
+  private handlePrismaError(error: any, reply: FastifyReply) {
+    // P2002: Unique constraint failed
+    if (error.code === 'P2002') {
+      const field = error.meta?.target?.[0] || 'field';
+      return reply.status(409).send({
+        error: 'Conflict',
+        message: `${field} already exists`
+      });
+    }
+
+    console.error('Database error:', error);
+    return reply.status(500).send({
+      error: 'Server Error',
+      message: 'Database operation failed'
+    });
+  }
+
+  /**
+   * CREATE: Create new applicant
+   */
   create = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const user = (request as any).user;
@@ -49,28 +122,53 @@ export class ApplicantController {
 
       const body = createApplicantSchema.parse(request.body);
 
-      // Validate group belongs to organization
+      // Validate group belongs to organization and is active
       const group = await this.server.prisma.group.findFirst({
-        where: { 
-          id: body.groupId, 
+        where: {
+          id: body.groupId,
           organizationId: orgId,
           isActive: true
         }
       });
 
       if (!group) {
-        return reply.status(400).send({ 
-          error: 'Bad Request', 
-          message: 'Invalid group ID' 
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'Invalid group ID'
         });
       }
 
       // Employees can only add to their assigned groups
       if (user.role === 'AGENCY_EMPLOYEE' && group.assignedEmployeeId !== user.id) {
-        return reply.status(403).send({ 
-          error: 'Forbidden', 
-          message: 'You can only add applicants to your assigned groups' 
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: 'You can only add applicants to your assigned groups'
         });
+      }
+
+      // Check for duplicate passport number
+      if (body.passportNumber) {
+        const isDuplicate = await this.checkDuplicatePassport(
+          body.passportNumber,
+          orgId
+        );
+        if (isDuplicate) {
+          return reply.status(409).send({
+            error: 'Conflict',
+            message: 'Passport number already exists in your organization'
+          });
+        }
+      }
+
+      // Check for duplicate email
+      if (body.email) {
+        const isDuplicate = await this.checkDuplicateEmail(body.email, orgId);
+        if (isDuplicate) {
+          return reply.status(409).send({
+            error: 'Conflict',
+            message: 'Email already exists in your organization'
+          });
+        }
       }
 
       const applicant = await this.server.prisma.$transaction(async (tx) => {
@@ -78,18 +176,18 @@ export class ApplicantController {
           data: {
             firstName: body.firstName,
             lastName: body.lastName,
-            email: body.email,
-            phone: body.phone,
+            email: body.email || null,
+            phone: body.phone || null,
             dob: body.dob ? new Date(body.dob) : null,
-            gender: body.gender,
-            nationality: body.nationality,
-            passportNumber: body.passportNumber,
+            gender: body.gender || null,
+            nationality: body.nationality || null,
+            passportNumber: body.passportNumber || null,
             passportExpiry: body.passportExpiry ? new Date(body.passportExpiry) : null,
             passportIssue: body.passportIssue ? new Date(body.passportIssue) : null,
-            address: body.address,
-            city: body.city,
-            country: body.country,
-            notes: body.notes,
+            address: body.address || null,
+            city: body.city || null,
+            country: body.country || null,
+            notes: body.notes || null,
             documents: body.documents,
             groupId: body.groupId,
             organizationId: orgId
@@ -111,9 +209,10 @@ export class ApplicantController {
             action: 'CREATE_APPLICANT',
             entityType: 'Applicant',
             entityId: created.id,
-            newValues: { 
+            newValues: {
               name: `${created.firstName} ${created.lastName}`,
-              group: group.code 
+              passport: created.passportNumber,
+              group: group.code
             },
             userId: user.id,
             organizationId: orgId
@@ -127,39 +226,46 @@ export class ApplicantController {
     } catch (error: any) {
       if (error.name === 'ZodError') {
         const messages = error.errors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
-        return reply.status(400).send({ 
-          error: 'Validation Error', 
+        return reply.status(400).send({
+          error: 'Validation Error',
           message: messages,
-          details: error.errors 
+          details: error.errors
         });
       }
-      console.error('Applicant creation error:', error);
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
-      });
+      return this.handlePrismaError(error, reply);
     }
   };
 
+  /**
+   * LIST: List applicants with filtering and pagination
+   */
   list = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const orgId = (request as any).organizationId;
       const user = (request as any).user;
-      const { 
-        page = 1, 
-        limit = 20, 
-        search, 
+      const {
+        page = '1',
+        limit = '20',
+        search,
         groupId,
+        passportNumber,
+        status,
         nationality,
         isActive = 'true'
       } = request.query as any;
 
+      // Validate pagination
+      const pageNum = Math.max(1, parseInt(page) || 1);
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20));
+
       const where: any = { organizationId: orgId };
 
+      // Filters
       if (isActive !== undefined) where.isActive = isActive === 'true';
       if (groupId) where.groupId = groupId;
       if (nationality) where.nationality = nationality;
-      
+
+      // Search by name, email, or passport
       if (search) {
         where.OR = [
           { firstName: { contains: search, mode: 'insensitive' } },
@@ -167,6 +273,21 @@ export class ApplicantController {
           { passportNumber: { contains: search, mode: 'insensitive' } },
           { email: { contains: search, mode: 'insensitive' } }
         ];
+      }
+
+      // Filter by exact passport number
+      if (passportNumber) {
+        where.passportNumber = {
+          equals: passportNumber,
+          mode: 'insensitive'
+        };
+      }
+
+      // Filter by application status
+      if (status) {
+        where.applications = {
+          some: { status }
+        };
       }
 
       // Employees can only see applicants from their assigned groups
@@ -177,9 +298,9 @@ export class ApplicantController {
       const [applicants, total] = await Promise.all([
         this.server.prisma.applicant.findMany({
           where,
-          skip: (page - 1) * limit,
-          take: parseInt(limit),
-          orderBy: { createdAt: 'desc' },
+          skip: (pageNum - 1) * limitNum,
+          take: limitNum,
+          orderBy: { lastName: 'asc' },
           include: {
             group: {
               select: {
@@ -199,40 +320,69 @@ export class ApplicantController {
       return reply.send({
         data: applicants,
         pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page: pageNum,
+          limit: limitNum,
           total,
-          totalPages: Math.ceil(total / limit)
+          totalPages: Math.ceil(total / limitNum)
         }
       });
     } catch (error: any) {
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
-      });
+      return this.handlePrismaError(error, reply);
     }
   };
 
+  /**
+   * LIST GROUPED: List applicants grouped by group with filters and pagination
+   */
   listGrouped = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const orgId = (request as any).organizationId;
       const user = (request as any).user;
+      const {
+        page = '1',
+        limit = '10',
+        groupCode,
+        groupName,
+        isActive = 'true'
+      } = request.query as any;
 
-      const groupWhere: any = { 
+      // Validate pagination
+      const pageNum = Math.max(1, parseInt(page) || 1);
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 10));
+
+      const groupWhere: any = {
         organizationId: orgId,
-        isActive: true 
+        isActive: true
       };
 
+      // Filter by group code (exact or partial)
+      if (groupCode) {
+        groupWhere.code = { contains: groupCode, mode: 'insensitive' };
+      }
+
+      // Filter by group name (exact or partial)
+      if (groupName) {
+        groupWhere.name = { contains: groupName, mode: 'insensitive' };
+      }
+
+      // Employees can only see their assigned groups
       if (user.role === 'AGENCY_EMPLOYEE') {
         groupWhere.assignedEmployeeId = user.id;
       }
 
+      // Get total groups for pagination
+      const totalGroups = await this.server.prisma.group.count({
+        where: groupWhere
+      });
+
       const groups = await this.server.prisma.group.findMany({
         where: groupWhere,
+        skip: (pageNum - 1) * limitNum,
+        take: limitNum,
         orderBy: { code: 'asc' },
         include: {
           applicants: {
-            where: { isActive: true },
+            where: { isActive: isActive === 'true' ? true : false },
             orderBy: { lastName: 'asc' },
             select: {
               id: true,
@@ -253,24 +403,32 @@ export class ApplicantController {
         }
       });
 
-      return reply.send(groups);
-    } catch (error: any) {
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
+      return reply.send({
+        data: groups,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: totalGroups,
+          totalPages: Math.ceil(totalGroups / limitNum)
+        }
       });
+    } catch (error: any) {
+      return this.handlePrismaError(error, reply);
     }
   };
 
+  /**
+   * LIST BY GROUP: List applicants in specific group
+   */
   listByGroup = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const orgId = (request as any).organizationId;
       const user = (request as any).user;
       const { groupId } = request.params as any;
 
-      const groupWhere: any = { 
+      const groupWhere: any = {
         id: groupId,
-        organizationId: orgId 
+        organizationId: orgId
       };
 
       if (user.role === 'AGENCY_EMPLOYEE') {
@@ -291,21 +449,22 @@ export class ApplicantController {
       });
 
       if (!group) {
-        return reply.status(404).send({ 
-          error: 'Not Found', 
-          message: 'Group not found' 
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Group not found'
         });
       }
 
       const applicants = await this.server.prisma.applicant.findMany({
-        where: { 
+        where: {
           groupId,
           organizationId: orgId,
-          isActive: true 
+          isActive: true
         },
         orderBy: { lastName: 'asc' },
         include: {
           applications: {
+            orderBy: { createdAt: 'desc' },
             select: {
               id: true,
               referenceNumber: true,
@@ -319,16 +478,17 @@ export class ApplicantController {
 
       return reply.send({
         group,
-        applicants
+        applicants,
+        count: applicants.length
       });
     } catch (error: any) {
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
-      });
+      return this.handlePrismaError(error, reply);
     }
   };
 
+  /**
+   * GET BY ID: Get single applicant with full details
+   */
   getById = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const orgId = (request as any).organizationId;
@@ -352,7 +512,8 @@ export class ApplicantController {
               template: {
                 select: {
                   id: true,
-                  name: true
+                  name: true,
+                  visaType: true
                 }
               }
             }
@@ -361,30 +522,30 @@ export class ApplicantController {
       });
 
       if (!applicant) {
-        return reply.status(404).send({ 
-          error: 'Not Found', 
-          message: 'Applicant not found' 
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Applicant not found'
         });
       }
 
       // Employees can only view applicants from their assigned groups
-      if (user.role === 'AGENCY_EMPLOYEE' && 
-          applicant.group.assignedEmployeeId !== user.id) {
-        return reply.status(403).send({ 
-          error: 'Forbidden', 
-          message: 'Access denied' 
+      if (user.role === 'AGENCY_EMPLOYEE' &&
+        applicant.group.assignedEmployeeId !== user.id) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: 'Access denied'
         });
       }
 
       return reply.send(applicant);
     } catch (error: any) {
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
-      });
+      return this.handlePrismaError(error, reply);
     }
   };
 
+  /**
+   * UPDATE: Update applicant details
+   */
   update = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const user = (request as any).user;
@@ -399,35 +560,76 @@ export class ApplicantController {
       });
 
       if (!existing) {
-        return reply.status(404).send({ 
-          error: 'Not Found', 
-          message: 'Applicant not found' 
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Applicant not found'
         });
       }
 
       // Employees can only update applicants from their assigned groups
-      if (user.role === 'AGENCY_EMPLOYEE' && 
-          existing.group.assignedEmployeeId !== user.id) {
-        return reply.status(403).send({ 
-          error: 'Forbidden', 
-          message: 'Access denied' 
+      if (user.role === 'AGENCY_EMPLOYEE' &&
+        existing.group.assignedEmployeeId !== user.id) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: 'Access denied'
         });
       }
 
       // Validate new group if changing
       if (body.groupId && body.groupId !== existing.groupId) {
         const newGroup = await this.server.prisma.group.findFirst({
-          where: { 
-            id: body.groupId, 
+          where: {
+            id: body.groupId,
             organizationId: orgId,
             isActive: true
           }
         });
 
         if (!newGroup) {
-          return reply.status(400).send({ 
-            error: 'Bad Request', 
-            message: 'Invalid group ID' 
+          return reply.status(400).send({
+            error: 'Bad Request',
+            message: 'Invalid group ID'
+          });
+        }
+
+        // Employees cannot move applicants to other groups
+        if (user.role === 'AGENCY_EMPLOYEE' &&
+          newGroup.assignedEmployeeId !== user.id) {
+          return reply.status(403).send({
+            error: 'Forbidden',
+            message: 'Cannot move applicant to another group'
+          });
+        }
+      }
+
+      // Check for duplicate passport (if changing and different from current)
+      if (body.passportNumber &&
+        body.passportNumber.toLowerCase() !== existing.passportNumber?.toLowerCase()) {
+        const isDuplicate = await this.checkDuplicatePassport(
+          body.passportNumber,
+          orgId,
+          id
+        );
+        if (isDuplicate) {
+          return reply.status(409).send({
+            error: 'Conflict',
+            message: 'Passport number already exists in your organization'
+          });
+        }
+      }
+
+      // Check for duplicate email (if changing and different from current)
+      if (body.email &&
+        body.email.toLowerCase() !== existing.email?.toLowerCase()) {
+        const isDuplicate = await this.checkDuplicateEmail(
+          body.email,
+          orgId,
+          id
+        );
+        if (isDuplicate) {
+          return reply.status(409).send({
+            error: 'Conflict',
+            message: 'Email already exists in your organization'
           });
         }
       }
@@ -457,8 +659,16 @@ export class ApplicantController {
           action: 'UPDATE_APPLICANT',
           entityType: 'Applicant',
           entityId: id,
-          oldValues: existing,
-          newValues: body,
+          oldValues: {
+            firstName: existing.firstName,
+            lastName: existing.lastName,
+            passport: existing.passportNumber
+          },
+          newValues: {
+            firstName: updated.firstName,
+            lastName: updated.lastName,
+            passport: updated.passportNumber
+          },
           userId: user.id,
           organizationId: orgId
         }
@@ -467,18 +677,18 @@ export class ApplicantController {
       return reply.send(updated);
     } catch (error: any) {
       if (error.name === 'ZodError') {
-        return reply.status(400).send({ 
-          error: 'Validation Error', 
-          details: error.errors 
+        return reply.status(400).send({
+          error: 'Validation Error',
+          details: error.errors
         });
       }
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
-      });
+      return this.handlePrismaError(error, reply);
     }
   };
 
+  /**
+   * SOFT DELETE: Mark applicant as inactive
+   */
   softDelete = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const user = (request as any).user;
@@ -486,9 +696,9 @@ export class ApplicantController {
       const { id } = request.params as any;
 
       if (user.role === 'AGENCY_EMPLOYEE') {
-        return reply.status(403).send({ 
-          error: 'Forbidden', 
-          message: 'Only admins can delete applicants' 
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: 'Only admins can delete applicants'
         });
       }
 
@@ -497,24 +707,24 @@ export class ApplicantController {
       });
 
       if (!applicant) {
-        return reply.status(404).send({ 
-          error: 'Not Found', 
-          message: 'Applicant not found' 
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Applicant not found'
         });
       }
 
       // Check for active applications
       const activeApps = await this.server.prisma.application.count({
-        where: { 
+        where: {
           applicantId: id,
           status: { notIn: ['DRAFT', 'REJECTED', 'DELIVERED'] }
         }
       });
 
       if (activeApps > 0) {
-        return reply.status(400).send({ 
-          error: 'Bad Request', 
-          message: 'Cannot delete applicant with active applications' 
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'Cannot delete applicant with active applications'
         });
       }
 
@@ -538,10 +748,7 @@ export class ApplicantController {
 
       return reply.send({ message: 'Applicant deleted successfully' });
     } catch (error: any) {
-      return reply.status(500).send({ 
-        error: 'Server Error', 
-        message: error.message 
-      });
+      return this.handlePrismaError(error, reply);
     }
   };
 }
