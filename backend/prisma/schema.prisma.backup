@@ -1,0 +1,269 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== CORE ENTITIES ====================
+
+enum UserRole {
+  SUPER_ADMIN
+  AGENCY_ADMIN
+  AGENCY_EMPLOYEE
+}
+
+enum ApplicationStatus {
+  DRAFT
+  REVIEW
+  READY
+  SUBMITTED
+  PROCESSING
+  APPROVED
+  REJECTED
+  DELIVERED
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
+model Organization {
+  id                String    @id @default(cuid())
+  name              String
+  code              String    @unique
+  email             String    @unique
+  phone             String?
+  address           String?
+  logo              String?
+  maxSeats          Int       @default(10)
+  usedSeats         Int       @default(0)
+  isActive          Boolean   @default(true)
+  subscriptionEnd   DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  users             User[]
+  groups            Group[]
+  applicants        Applicant[]
+  applications      Application[]
+  templates         Template[]
+  imports           Import[]
+  auditLogs         AuditLog[]
+
+  @@map("organizations")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String
+  firstName         String
+  lastName          String
+  role              UserRole
+  phone             String?
+  avatar            String?
+  isActive          Boolean   @default(true)
+  lastLogin         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  organizationId    String?
+  organization      Organization? @relation(fields: [organizationId], references: [id])
+
+  sessions          Session[]
+  blacklistedTokens TokenBlacklist[]
+  assignedGroups    Group[]       @relation("GroupEmployee")
+  auditLogs         AuditLog[]
+
+  @@map("users")
+}
+
+model TokenBlacklist {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@map("token_blacklist")
+}
+
+model Session {
+  id                String    @id @default(cuid())
+  token             String    @unique
+  userId            String
+  user              User      @relation(fields: [userId], references: [id])
+  expiresAt         DateTime
+  createdAt         DateTime  @default(now())
+
+  @@map("sessions")
+}
+
+// ==================== VISA PROCESSING ====================
+
+model Group {
+  id                String    @id @default(cuid())
+  code              String
+  name              String
+  travelDate        DateTime?
+  externalAgent     String?
+  notes             String?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  
+  assignedEmployeeId String?
+  assignedEmployee  User?     @relation("GroupEmployee", fields: [assignedEmployeeId], references: [id])
+  
+  applicants        Applicant[]
+
+  @@unique([code, organizationId])
+  @@map("groups")
+}
+
+model Applicant {
+  id                String    @id @default(cuid())
+  firstName         String
+  lastName          String
+  email             String?
+  phone             String?
+  dob               DateTime?
+  gender            String?
+  nationality       String?
+  passportNumber    String?
+  passportExpiry    DateTime?
+  passportIssue     DateTime?
+  address           String?
+  city              String?
+  country           String?
+  photo             String?
+  documents         Json?
+  notes             String?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  
+  groupId           String
+  group             Group     @relation(fields: [groupId], references: [id])
+  
+  applications      Application[]
+
+  @@map("applicants")
+}
+
+model Application {
+  id                String    @id @default(cuid())
+  referenceNumber   String    @unique
+  visaType          String
+  destinationCountry String
+  status            ApplicationStatus @default(DRAFT)
+  submittedAt       DateTime?
+  processedAt       DateTime?
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  rejectionReason   String?
+  notes             String?
+  documents         Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  
+  applicantId       String
+  applicant         Applicant @relation(fields: [applicantId], references: [id])
+  
+  templateId        String?
+  template          Template? @relation(fields: [templateId], references: [id])
+  
+  auditLogs         AuditLog[]
+
+  @@map("applications")
+}
+
+model Template {
+  id                String    @id @default(cuid())
+  name              String
+  country           String
+  visaType          String
+  description       String?
+  fields            Json
+  conditions        Json?
+  version           Int       @default(1)
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  
+  applications      Application[]
+
+  @@unique([name, country, visaType, organizationId])
+  @@map("templates")
+}
+
+// ==================== IMPORTS & OCR ====================
+
+model Import {
+  id                String    @id @default(cuid())
+  fileName          String
+  fileType          String
+  fileSize          Int
+  filePath          String
+  status            ImportStatus @default(PENDING)
+  processedCount    Int       @default(0)
+  totalCount        Int       @default(0)
+  errorCount        Int       @default(0)
+  errors            Json?
+  metadata          Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  
+  groupId           String?
+
+  @@map("imports")
+}
+
+// ==================== AUDIT ====================
+
+model AuditLog {
+  id                String    @id @default(cuid())
+  action            String
+  entityType        String
+  entityId          String
+  oldValues         Json?
+  newValues         Json?
+  ipAddress         String?
+  userAgent         String?
+  createdAt         DateTime  @default(now())
+
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  
+  userId            String?
+  user              User?     @relation(fields: [userId], references: [id])
+  
+  applicationId     String?
+  application       Application? @relation(fields: [applicationId], references: [id])
+
+  @@map("audit_logs")
+}
