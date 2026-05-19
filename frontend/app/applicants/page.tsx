@@ -66,13 +66,15 @@ export default function ApplicantsPage() {
   const loadApplicants = async () => {
     try {
       const response = await applicantsApi.listGrouped();
-      setGroups(response.data);
+        const groupsData = response.data?.data || [];
+      setGroups(groupsData);
       // Expand first group by default
-      if (response.data.length > 0) {
-        setExpandedGroups(new Set([response.data[0].id]));
+      if (groupsData.length > 0) {
+        setExpandedGroups(new Set([groupsData[0].id]));
       }
     } catch (error) {
       console.error('Failed to load applicants:', error);
+      setGroups([]);
     } finally {
       setLoading(false);
     }
@@ -115,14 +117,14 @@ export default function ApplicantsPage() {
     }
   };
 
-  const filteredGroups = (Array.isArray(groups) ? groups : [])
+  const filteredGroups = groups
     .map((group) => ({
       ...group,
       applicants: group.applicants.filter(
         (app) =>
           app.firstName.toLowerCase().includes(search.toLowerCase()) ||
           app.lastName.toLowerCase().includes(search.toLowerCase()) ||
-          app.passportNumber?.toLowerCase().includes(search.toLowerCase())
+          (app.passportNumber?.toLowerCase() ?? '').includes(search.toLowerCase())
       ),
     }))
     .filter(
@@ -225,7 +227,7 @@ export default function ApplicantsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-500">{group._count.applicants} applicants</span>
+                    <span className="text-sm text-gray-500">{group.applicants.length} applicants</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
