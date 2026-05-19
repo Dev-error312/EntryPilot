@@ -57,6 +57,7 @@ model Organization {
   applications      Application[]
   templates         Template[]
   imports           Import[]
+  applicantDrafts   ApplicantDraft[]
   auditLogs         AuditLog[]
 
   @@index([code])
@@ -254,10 +255,36 @@ model Import {
   groupId           String?
   group             Group?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
+  drafts            ApplicantDraft[]
+
   @@index([organizationId])
   @@index([groupId])
   @@index([status])
   @@map("imports")
+}
+
+model ApplicantDraft {
+  id                String    @id @default(cuid())
+  importId          String
+  import            Import    @relation(fields: [importId], references: [id], onDelete: Cascade)
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  extractedData     Json
+  fieldConfidence   Json
+  confidence        Int
+  status            String    @default("PENDING_REVIEW")
+  corrections       Json?
+  originalSource    String?
+  reviewedBy        String?
+  reviewedAt        DateTime? @db.Timestamp(3)
+  createdAt         DateTime  @default(now()) @db.Timestamp(3)
+  updatedAt         DateTime  @updatedAt @db.Timestamp(3)
+
+  @@index([importId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([confidence])
+  @@map("applicant_drafts")
 }
 
 // ==================== AUDIT ====================

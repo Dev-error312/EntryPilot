@@ -115,7 +115,7 @@ export default function ApplicantsPage() {
     }
   };
 
-  const filteredGroups = groups
+  const filteredGroups = (Array.isArray(groups) ? groups : [])
     .map((group) => ({
       ...group,
       applicants: group.applicants.filter(

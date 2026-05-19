@@ -12,12 +12,31 @@ import {
   ParseResult
 } from './china-visa-parser';
 import { CHINA_VISA_FIELDS } from './china-visa-fields';
+import { ApplicantDraftService } from './applicant-draft.service';
 
 // Ensure uploads directory exists
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
 
 export class ImportController {
+  private draftService: ApplicantDraftService | null = null;
+
   constructor(private server: FastifyInstance) {}
+
+  private initDraftService() {
+    if (!this.draftService) {
+      this.draftService = new ApplicantDraftService(this.server);
+    }
+    return this.draftService;
+  }
+
+  async initOCR() {
+    try {
+      console.log('OCR initialization called');
+      // TODO: Implement OCR worker pool initialization if needed
+    } catch (error) {
+      console.error('Failed to initialize OCR:', error);
+    }
+  }
 
   async ensureUploadsDir() {
     try {
@@ -649,4 +668,250 @@ export class ImportController {
 
     return createdCount;
   }
+
+  // ==================== DRAFT MANAGEMENT ====================
+
+  getDrafts = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const orgId = (request as any).organizationId;
+      const { id } = request.params as any;
+      const { status, minConfidence, page = 1, limit = 20 } = request.query as any;
+
+      const importRecord = await this.server.prisma.import.findFirst({
+        where: { id, organizationId: orgId }
+      });
+
+      if (!importRecord) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Import not found'
+        });
+      }
+
+      const draftService = this.initDraftService();
+      const { drafts, total } = await draftService.getDrafts(id, orgId, {
+        status: status as string,
+        minConfidence: minConfidence ? parseInt(minConfidence) : undefined,
+        page: parseInt(page),
+        limit: parseInt(limit)
+      });
+
+      const stats = await draftService.getReviewStats(id, orgId);
+
+      return reply.send({
+        drafts,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total
+        },
+        stats
+      });
+    } catch (error: any) {
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
+      });
+    }
+  };
+
+  getDraft = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const orgId = (request as any).organizationId;
+      const { id, draftId } = request.params as any;
+
+      const importRecord = await this.server.prisma.import.findFirst({
+        where: { id, organizationId: orgId }
+      });
+
+      if (!importRecord) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Import not found'
+        });
+      }
+
+      const draftService = this.initDraftService();
+      const draft = await draftService.getDraft(draftId, orgId);
+
+      if (!draft) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Draft not found'
+        });
+      }
+
+      const duplicates = await draftService.checkDuplicates(draftId, orgId);
+
+      return reply.send({
+        ...draft,
+        duplicates: duplicates.duplicates
+      });
+    } catch (error: any) {
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
+      });
+    }
+  };
+
+  updateDraft = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const user = (request as any).user;
+      const orgId = (request as any).organizationId;
+      const { id, draftId } = request.params as any;
+      const corrections = request.body as any;
+
+      const importRecord = await this.server.prisma.import.findFirst({
+        where: { id, organizationId: orgId }
+      });
+
+      if (!importRecord) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Import not found'
+        });
+      }
+
+      const draftService = this.initDraftService();
+      const draft = await draftService.updateDraft(draftId, orgId, corrections, user.id);
+
+      return reply.send(draft);
+    } catch (error: any) {
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
+      });
+    }
+  };
+
+  approveDraft = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const user = (request as any).user;
+      const orgId = (request as any).organizationId;
+      const { id, draftId } = request.params as any;
+
+      const importRecord = await this.server.prisma.import.findFirst({
+        where: { id, organizationId: orgId }
+      });
+
+      if (!importRecord) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Import not found'
+        });
+      }
+
+      if (!importRecord.groupId) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'Import has no associated group'
+        });
+      }
+
+      const draftService = this.initDraftService();
+      const result = await draftService.approveDraft(draftId, orgId, importRecord.groupId, user.id);
+
+      return reply.send(result);
+    } catch (error: any) {
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
+      });
+    }
+  };
+
+  approveAll = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const user = (request as any).user;
+      const orgId = (request as any).organizationId;
+      const { id } = request.params as any;
+
+      const importRecord = await this.server.prisma.import.findFirst({
+        where: { id, organizationId: orgId }
+      });
+
+      if (!importRecord) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Import not found'
+        });
+      }
+
+      if (!importRecord.groupId) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'Import has no associated group'
+        });
+      }
+
+      const draftService = this.initDraftService();
+      const result = await draftService.approveAll(id, orgId, importRecord.groupId, user.id);
+
+      return reply.send(result);
+    } catch (error: any) {
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
+      });
+    }
+  };
+
+  rejectDraft = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const user = (request as any).user;
+      const orgId = (request as any).organizationId;
+      const { id, draftId } = request.params as any;
+      const { reason } = request.body as any;
+
+      const importRecord = await this.server.prisma.import.findFirst({
+        where: { id, organizationId: orgId }
+      });
+
+      if (!importRecord) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Import not found'
+        });
+      }
+
+      const draftService = this.initDraftService();
+      const draft = await draftService.rejectDraft(draftId, orgId, user.id, reason);
+
+      return reply.send(draft);
+    } catch (error: any) {
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
+      });
+    }
+  };
+
+  getStats = async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const orgId = (request as any).organizationId;
+      const { id } = request.params as any;
+
+      const importRecord = await this.server.prisma.import.findFirst({
+        where: { id, organizationId: orgId }
+      });
+
+      if (!importRecord) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Import not found'
+        });
+      }
+
+      const draftService = this.initDraftService();
+      const stats = await draftService.getReviewStats(id, orgId);
+
+      return reply.send(stats);
+    } catch (error: any) {
+      return reply.status(500).send({
+        error: 'Server Error',
+        message: error.message
+      });
+    }
+  };
 }
