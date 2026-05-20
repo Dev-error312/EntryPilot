@@ -59,6 +59,10 @@ model Organization {
   imports           Import[]
   applicantDrafts   ApplicantDraft[]
   auditLogs         AuditLog[]
+  visaForms         VisaApplicationForm[]
+  batchTemplates    BatchPreFillTemplate[]
+  visaApplications  CompleteVisaApplication[]
+  visaDocuments     VisaApplicationDocument[]
 
   @@index([code])
   @@index([email])
@@ -86,6 +90,9 @@ model User {
   blacklistedTokens TokenBlacklist[]
   assignedGroups    Group[]       @relation("GroupEmployee")
   auditLogs         AuditLog[]
+  appliedBatches    BatchPreFillTemplate[] @relation("AppliedByEmployee")
+  reviewedApplications CompleteVisaApplication[] @relation("ReviewedBy")
+  uploadedDocuments VisaApplicationDocument[]
 
   @@index([organizationId])
   @@index([email])
@@ -127,6 +134,9 @@ model Group {
 
   applicants        Applicant[]
   imports           Import[]
+  visaForms         VisaApplicationForm[]
+  batchTemplates    BatchPreFillTemplate[]
+  visaApplications  CompleteVisaApplication[]
 
   @@unique([code, organizationId])
   @@index([organizationId])
@@ -164,6 +174,8 @@ model Applicant {
   group             Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   applications      Application[]
+  visaForms         VisaApplicationForm[]
+  visaApplications  CompleteVisaApplication[]
 
   @@index([organizationId])
   @@index([groupId])
@@ -316,6 +328,279 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ==================== VISA APPLICATION FORMS ====================
+
+model VisaApplicationForm {
+  id                String    @id @default(cuid())
+
+  visaPhotoId       String?
+  passportPage1Id   String?
+  passportPage2Id   String?
+  passportBackPageId String?
+
+  fullName          String
+  placeOfBirthCountry String?
+  placeOfBirthProvince String?
+  placeOfBirthCity  String?
+  maritalStatus     String?
+  maritalStatusOther String?
+
+  hasOtherNationality Boolean @default(false)
+  otherNationality  String?
+  otherNationalityIdNumber String?
+  otherNationalityPassportNumber String?
+  otherNationalityNotProvidedReason String?
+
+  hasPermanentResidence Boolean @default(false)
+  permanentResidenceCountries String?
+
+  hasFormerNationality Boolean @default(false)
+  formerNationality String?
+
+  currentOccupation String?
+  workExperienceStartDate DateTime?
+  workExperienceEndDate DateTime?
+  companyName       String?
+  companyAddress    String?
+  companyPhone      String?
+  supervisorName    String?
+  supervisorPhone   String?
+  position          String?
+  duty              String?
+
+  schoolName        String?
+  educationLevel    String?
+  majorSubject      String?
+
+  residenceCountry  String?
+  residenceProvince String?
+  residenceCity     String?
+  residenceStreet   String?
+  residenceMobilePhone String?
+  residencePhone    String?
+  residenceEmail    String?
+
+  spouseFirstName   String?
+  spouseLastName    String?
+  spouseDateOfBirth DateTime?
+  spouseCountryOfBirth String?
+  spouseCityOfBirth String?
+  spouseAddress     String?
+  spouseOccupation  String?
+
+  fatherFirstName   String?
+  fatherLastName    String?
+  fatherNationality String?
+  fatherDateOfBirth DateTime?
+  fatherStillLiving Boolean?
+
+  motherFirstName   String?
+  motherLastName    String?
+  motherNationality String?
+  motherDateOfBirth DateTime?
+  motherStillLiving Boolean?
+
+  children          Json?
+
+  emergencyFirstName String?
+  emergencyLastName String?
+  emergencyRelationship String?
+  emergencyPhone    String?
+
+  hasBeenToChina    Boolean @default(false)
+  previousChineseVisaIds String?
+
+  hasValidVisas     Boolean @default(false)
+  validVisaCountries String?
+
+  countriesVisitedLast12Months String?
+
+  status            String    @default("DRAFT")
+  applicantId       String?
+  applicant         Applicant? @relation(fields: [applicantId], references: [id], onDelete: SetNull)
+
+  // Relation to complete applications
+  completeApplications CompleteVisaApplication[] @relation("FormData")
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  submittedAt       DateTime?
+
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  groupId           String
+  group             Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([groupId])
+  @@index([status])
+  @@map("visa_application_forms")
+}
+
+// ==================== BATCH PRE-FILL TEMPLATES ====================
+
+model BatchPreFillTemplate {
+  id                String    @id @default(cuid())
+  name              String
+  description       String?
+
+  inviterFullName   String?
+  inviterCompanyName String?
+  inviterPosition   String?
+  inviterPhone      String?
+  inviterEmail      String?
+  inviterAddress    String?
+  inviterCountry    String    @default("China")
+  inviterProvince   String?
+  inviterCity       String?
+
+  purposeOfVisit    String?
+  visaType          String?
+  visaDuration      Int?
+  intendedArrivalDate DateTime?
+  intendedDepartureDate DateTime?
+
+  hotelName         String?
+  hotelAddress      String?
+  hotelPhone        String?
+  hotelCheckInDate  DateTime?
+  hotelCheckOutDate DateTime?
+
+  ticketReceiptIds  String?
+  hotelBookingIds   String?
+  itineraryIds      String?
+  invitationLetterIds String?
+
+  groupNumber       Int?
+  groupLeaderName   String?
+  groupLeaderPhone  String?
+
+  insuranceProvider String?
+  insurancePolicyNumber String?
+  insuranceCoverageAmount String?
+
+  visaFeeAmount     Decimal?
+  serviceFeeAmount  Decimal?
+  totalAmount       Decimal?
+  paymentMethod     String?
+
+  appliedByEmployeeId String?
+  appliedByEmployee User?     @relation("AppliedByEmployee", fields: [appliedByEmployeeId], references: [id], onDelete: SetNull)
+
+  isActive          Boolean   @default(true)
+
+  // Relation to complete applications
+  completeApplications CompleteVisaApplication[]
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  groupId           String
+  group             Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([groupId])
+  @@index([isActive])
+  @@map("batch_pre_fill_templates")
+}
+
+// ==================== COMPLETE VISA APPLICATIONS ====================
+
+model CompleteVisaApplication {
+  id                String    @id @default(cuid())
+  referenceNumber   String    @unique
+
+  formDataId        String
+  formData          VisaApplicationForm @relation("FormData", fields: [formDataId], references: [id], onDelete: Cascade)
+
+  batchTemplateId   String?
+  batchTemplate     BatchPreFillTemplate? @relation(fields: [batchTemplateId], references: [id], onDelete: SetNull)
+
+  applicantFullName String
+  applicantEmail    String?
+  applicantPhone    String?
+  applicantDOB      DateTime?
+
+  inviterFullName   String?
+  inviterCompany    String?
+  inviterPhone      String?
+  inviterEmail      String?
+
+  purposeOfVisit    String?
+  visaType          String?
+  intendedArrivalDate DateTime?
+  intendedDepartureDate DateTime?
+
+  ticketReceiptIds  String?
+  hotelBookingIds   String?
+  itineraryIds      String?
+  invitationLetterIds String?
+
+  status            String    @default("DRAFT")
+
+  submittedAt       DateTime?
+  reviewedAt        DateTime?
+  reviewedByUserId  String?
+  reviewedByUser    User?     @relation("ReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  approvedAt        DateTime?
+  rejectionReason   String?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  groupId           String
+  group             Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  applicantId       String?
+  applicant         Applicant? @relation(fields: [applicantId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([groupId])
+  @@index([applicantId])
+  @@index([status])
+  @@index([referenceNumber])
+  @@map("complete_visa_applications")
+}
+
+// ==================== VISA APPLICATION DOCUMENTS ====================
+
+model VisaApplicationDocument {
+  id                String    @id @default(cuid())
+  fileName          String
+  fileType          String
+  filePath          String
+  fileSize          Int
+  mimeType          String
+
+  documentCategory  String
+  documentType      String
+
+  uploadedBy        String
+  uploadedByUser    User      @relation(fields: [uploadedBy], references: [id])
+
+  associatedWith    String?
+
+  status            String    @default("PENDING")
+
+  createdAt         DateTime  @default(now())
+
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([documentType])
+  @@index([uploadedBy])
+  @@map("visa_application_documents")
 }
 
 model TokenBlacklist {

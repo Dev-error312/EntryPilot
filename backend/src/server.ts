@@ -14,6 +14,10 @@ import { importRoutes } from './modules/imports/import.routes';
 import { auditRoutes } from './modules/audit/audit.routes';
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes';
 import { templateRoutes as importTemplateRoutes } from './modules/imports/template.routes';
+import { visaFormsRoutes } from './modules/visa-forms/visa-forms.routes';
+import { batchTemplateRoutes } from './modules/batch-templates/batch-template.routes';
+import { visaApplicationRoutes } from './modules/visa-applications/visa-application.routes';
+import { visaDocumentRoutes } from './modules/visa-documents/visa-document.routes';
 import { authMiddleware } from './middleware/auth.middleware';
 import { tenantMiddleware } from './middleware/tenant.middleware';
 
@@ -66,6 +70,10 @@ async function bootstrap() {
   await server.register(importTemplateRoutes, { prefix: '/api/imports/templates' });
   await server.register(auditRoutes, { prefix: '/api/audit' });
   await server.register(dashboardRoutes, { prefix: '/api/dashboard' });
+  await server.register(visaFormsRoutes, { prefix: '/api/visa-forms' });
+  await server.register(batchTemplateRoutes, { prefix: '/api/batch-templates' });
+  await server.register(visaApplicationRoutes, { prefix: '/api/visa-applications' });
+  await server.register(visaDocumentRoutes, { prefix: '/api/visa-documents' });
 
   // Start server
   try {
