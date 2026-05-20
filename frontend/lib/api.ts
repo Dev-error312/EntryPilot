@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useAuthStore } from '@/store/authStore';
 
 const api = axios.create({
   baseURL: '/api',
@@ -10,12 +11,23 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('visaflow-auth');
+    // Prefer in-memory Zustand store token to avoid race with persist writing to localStorage
+      try {
+        const stateToken = useAuthStore.getState?.().token;
+        const cleaned = stateToken ? (typeof stateToken === 'string' ? stateToken.replace(/\s+/g, '') : stateToken) : null;
+        if (cleaned) {
+          config.headers.Authorization = `Bearer ${cleaned}`;
+          return config;
+        }
+      } catch {}
+
+    const stored = sessionStorage.getItem('visaflow-auth');
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
         if (parsed?.state?.token) {
-          config.headers.Authorization = `Bearer ${parsed.state.token}`;
+          const cleaned = typeof parsed.state.token === 'string' ? parsed.state.token.replace(/\s+/g, '') : parsed.state.token;
+          config.headers.Authorization = `Bearer ${cleaned}`;
         }
       } catch {}
     }
@@ -31,7 +43,7 @@ api.interceptors.response.use(
       if (typeof window !== 'undefined') {
         const isLoginPage = window.location.pathname === '/login';
         if (!isLoginPage) {
-          localStorage.removeItem('visaflow-auth');
+          sessionStorage.removeItem('visaflow-auth');
           window.location.href = '/login';
         }
       }

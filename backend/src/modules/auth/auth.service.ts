@@ -25,7 +25,7 @@ export class AuthService {
     }
 
     // Generate tokens
-    const token = this.server.jwt.sign(
+    let token = this.server.jwt.sign(
       { 
         id: user.id, 
         email: user.email, 
@@ -39,6 +39,15 @@ export class AuthService {
       { id: user.id, type: 'refresh' },
       { expiresIn: '7d' }
     );
+
+    // sanitize tokens to ensure no accidental whitespace/newlines
+    if (typeof token === 'string') {
+      token = token.replace(/\s+/g, '');
+    }
+    let cleanRefreshToken = refreshToken;
+    if (typeof refreshToken === 'string') {
+      cleanRefreshToken = refreshToken.replace(/\s+/g, '');
+    }
 
     // Create session
     const session = await this.server.prisma.session.create({
@@ -57,7 +66,7 @@ export class AuthService {
 
     return {
       token,
-      refreshToken,
+      refreshToken: cleanRefreshToken,
       user: {
         id: user.id,
         email: user.email,

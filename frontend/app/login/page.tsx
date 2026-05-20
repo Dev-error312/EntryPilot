@@ -21,12 +21,12 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    if (!mounted || !isHydrated) return;
+    if (!mounted) return;
 
     if (token && user) {
       router.replace('/dashboard');
     }
-  }, [mounted, isHydrated, token, user, router]);
+  }, [mounted, token, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +35,7 @@ export default function LoginPage() {
     
     try {
       await login(email, password);
-      router.replace('/dashboard');
+      // Don't redirect here - let useEffect handle it after store persists
     } catch (err: any) {
       setError(err.message || 'Login failed');
     } finally {
@@ -43,8 +43,15 @@ export default function LoginPage() {
     }
   };
 
-  // Show loading while hydrating
-  if (!mounted || !isHydrated) {
+    // Wait for store to persist after login
+    useEffect(() => {
+      if (token && user && mounted) {
+        router.replace('/dashboard');
+      }
+    }, [token, user, mounted, isHydrated, router]);
+
+  // Show loading while mounting only (don't block on store hydration)
+  if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="w-8 h-8 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />

@@ -22,15 +22,15 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   }, []);
 
   useEffect(() => {
-    if (!mounted || !isHydrated) return;
+    if (!mounted) return;
 
     if (!token || !user) {
       router.replace('/login');
     }
-  }, [mounted, isHydrated, token, user, router]);
+  }, [mounted, token, user, router]);
 
   // Show loading state
-  if (!mounted || !isHydrated) {
+  if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

@@ -52,12 +52,38 @@ export const useAuthStore = create<AuthState>()(
 
           const data = await response.json();
           
+          // sanitize tokens to remove accidental whitespace/newlines
+          const cleanToken = typeof data.token === 'string' ? data.token.replace(/\s+/g, '') : data.token;
+          const cleanRefresh = typeof data.refreshToken === 'string' ? data.refreshToken.replace(/\s+/g, '') : data.refreshToken;
+
           set({
             user: data.user,
-            token: data.token,
-            refreshToken: data.refreshToken,
+            token: cleanToken,
+            refreshToken: cleanRefresh,
             isAuthenticated: true,
           });
+          // Immediately sync to sessionStorage to avoid a later rehydrate overwriting the in-memory state
+          try {
+            if (typeof window !== 'undefined' && window.sessionStorage) {
+              const payload = {
+                state: {
+                  token: cleanToken,
+                  refreshToken: cleanRefresh,
+                  user: data.user,
+                  isAuthenticated: true,
+                },
+                version: 0,
+              };
+              window.sessionStorage.setItem('visaflow-auth', JSON.stringify(payload));
+              // set a transient flag to tell rehydrate to skip applying older persisted state
+              (window as any).__authJustLoggedIn = true;
+            }
+          } catch {}
+          // debug: confirm token set
+          try {
+            // eslint-disable-next-line no-console
+            console.log('[authStore] login successful, token set:', data.token?.slice?.(0,10));
+          } catch {}
         } catch (error: any) {
           throw new Error(error.message || 'Login failed');
         }
@@ -86,7 +112,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'visaflow-auth',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         token: state.token,
         refreshToken: state.refreshToken,
@@ -94,10 +120,21 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.setHydrated();
-        }
+        return (inboundState) => {
+          try {
+            // If we just logged in, skip applying persisted inbound state (it may be stale)
+            if (typeof window !== 'undefined' && (window as any).__authJustLoggedIn) {
+              (window as any).__authJustLoggedIn = false;
+            }
+
+            // Always mark store as hydrated so UI stops showing loading state
+            const s = useAuthStore.getState();
+            s?.setHydrated?.();
+          } catch {}
+        };
       },
     }
   )
 );
+
+// Debug exposure removed in cleanup

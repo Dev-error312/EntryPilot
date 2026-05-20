@@ -17,6 +17,7 @@ import {
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { dashboardApi } from '@/lib/api';
 import clsx from 'clsx';
+import { useAuthStore } from '@/store/authStore';
 
 interface Stats {
   activeGroups: number;
@@ -33,6 +34,18 @@ interface Stats {
     rejected: number;
     delivered: number;
   };
+}
+
+interface SuperAdminStats {
+  overview: {
+    totalOrganizations: number;
+    activeOrganizations: number;
+    totalUsers: number;
+    totalApplicants: number;
+    totalApplications: number;
+  };
+  applications: Record<string, number>;
+  recentOrganizations: any[];
 }
 
 const statCards = [
@@ -84,7 +97,9 @@ const statusCards = [
 ];
 
 export default function DashboardPage() {
+  const user = useAuthStore((state) => state.user);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [superAdminStats, setSuperAdminStats] = useState<SuperAdminStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -94,12 +109,34 @@ export default function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
-      const [statsRes, recentRes] = await Promise.all([
-        dashboardApi.stats(),
-        dashboardApi.recent(5),
-      ]);
-      setStats(statsRes.data);
-      setRecentActivity(recentRes.data.recentActivity || []);
+      if (user?.role === 'SUPER_ADMIN') {
+        const superAdminRes = await dashboardApi.superAdmin();
+        setSuperAdminStats(superAdminRes.data);
+        setStats({
+          activeGroups: superAdminRes.data.overview.activeOrganizations,
+          totalApplicants: superAdminRes.data.overview.totalApplicants,
+          pendingImports: 0,
+          applications: {
+            total: superAdminRes.data.overview.totalApplications,
+            draft: superAdminRes.data.applications.draft || 0,
+            review: superAdminRes.data.applications.review || 0,
+            ready: superAdminRes.data.applications.ready || 0,
+            submitted: superAdminRes.data.applications.submitted || 0,
+            processing: superAdminRes.data.applications.processing || 0,
+            approved: superAdminRes.data.applications.approved || 0,
+            rejected: superAdminRes.data.applications.rejected || 0,
+            delivered: superAdminRes.data.applications.delivered || 0,
+          },
+        });
+        setRecentActivity([]);
+      } else {
+        const [statsRes, recentRes] = await Promise.all([
+          dashboardApi.stats(),
+          dashboardApi.recent(5),
+        ]);
+        setStats(statsRes.data);
+        setRecentActivity(recentRes.data.recentActivity || []);
+      }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
@@ -168,7 +205,7 @@ export default function DashboardPage() {
           className="card p-6"
         >
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Application Status
+            {user?.role === 'SUPER_ADMIN' ? 'Platform Overview' : 'Application Status'}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
             {statusCards.map((status) => (
@@ -202,11 +239,13 @@ export default function DashboardPage() {
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">
-                Recent Activity
+                {user?.role === 'SUPER_ADMIN' ? 'Recent Organizations' : 'Recent Activity'}
               </h2>
-              <a href="/audit" className="text-sm text-gray-500 hover:text-gray-900">
-                View all
-              </a>
+              {user?.role !== 'SUPER_ADMIN' && (
+                <a href="/audit" className="text-sm text-gray-500 hover:text-gray-900">
+                  View all
+                </a>
+              )}
             </div>
             <div className="space-y-4">
               {loading ? (
@@ -216,6 +255,22 @@ export default function DashboardPage() {
                     <div className="flex-1">
                       <div className="h-4 bg-gray-200 rounded w-3/4 mb-1" />
                       <div className="h-3 bg-gray-100 rounded w-1/2" />
+                    </div>
+                  </div>
+                ))
+              ) : user?.role === 'SUPER_ADMIN' && superAdminStats?.recentOrganizations?.length ? (
+                superAdminStats.recentOrganizations.map((org: any) => (
+                  <div key={org.id} className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-medium text-gray-600">{org.name?.[0]}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-900">
+                        <span className="font-medium">{org.name}</span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {org._count?.users || 0} users, {org._count?.applicants || 0} applicants, {org._count?.applications || 0} applications
+                      </p>
                     </div>
                   </div>
                 ))
