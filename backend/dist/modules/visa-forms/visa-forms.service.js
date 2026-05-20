@@ -9,7 +9,7 @@ class VisaFormsService {
             data: {
                 ...data,
                 organizationId,
-                status: 'DRAFT'
+                status: data.status || 'READY'
             }
         });
     }

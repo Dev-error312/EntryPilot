@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import ConfirmDeleteModal from '@/components/ConfirmDeleteModal';
-import { applicantsApi, groupsApi } from '@/lib/api';
+import { applicantsApi, groupsApi, visaFormsApi } from '@/lib/api';
+import VisaApplicationForm from '@/components/VisaApplicationForm';
 import clsx from 'clsx';
 
 interface Applicant {
@@ -393,81 +394,83 @@ function CreateApplicantModal({
   groups: GroupedGroup[];
   onSuccess: () => void;
 }) {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    dob: '',
-    gender: '',
-    nationality: '',
-    passportNumber: '',
-    passportExpiry: '',
-    groupId: '',
-  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (open && defaultGroupId) {
-      setFormData((prev) => ({ ...prev, groupId: defaultGroupId }));
-    }
-  }, [open, defaultGroupId]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleVisaSubmit = async (uploadFormData: FormData) => {
     setLoading(true);
     setError('');
-
     try {
-      if (!formData.firstName.trim()) {
-        setError('First Name is required');
-        setLoading(false);
-        return;
-      }
-      if (!formData.lastName.trim()) {
-        setError('Last Name is required');
-        setLoading(false);
-        return;
-      }
-      if (!formData.groupId) {
-        setError('Group is required');
-        setLoading(false);
-        return;
-      }
+      // Prepare minimal applicant payload from form data
+      const fullName = (uploadFormData.get('fullName') as string) || '';
+      const nameParts = fullName.trim().split(/\s+/);
+      const firstName = nameParts.shift() || '';
+      const lastName = nameParts.join(' ') || '';
 
-      const data: any = {
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        groupId: formData.groupId,
+      const applicantPayload: any = {
+        firstName: firstName || 'Unknown',
+        lastName: lastName || 'Applicant',
+        groupId: (uploadFormData.get('groupId') as string) || defaultGroupId || '',
       };
 
-      if (formData.email?.trim()) data.email = formData.email.trim();
-      if (formData.phone?.trim()) data.phone = formData.phone.trim();
-      if (formData.dob) data.dob = new Date(formData.dob).toISOString();
-      if (formData.gender) data.gender = formData.gender;
-      if (formData.nationality?.trim()) data.nationality = formData.nationality.trim();
-      if (formData.passportNumber?.trim()) data.passportNumber = formData.passportNumber.trim();
-      if (formData.passportExpiry) data.passportExpiry = new Date(formData.passportExpiry).toISOString();
+      const email = uploadFormData.get('residenceEmail') || uploadFormData.get('residence_email') || uploadFormData.get('email');
+      const phone = uploadFormData.get('residenceMobilePhone') || uploadFormData.get('residence_mobile_phone') || uploadFormData.get('phone');
+      const nationality = uploadFormData.get('placeOfBirthCountry') || uploadFormData.get('nationality');
+      const passportNumber = uploadFormData.get('passportNumber');
 
-      await applicantsApi.create(data);
+      if (email) applicantPayload.email = String(email);
+      if (phone) applicantPayload.phone = String(phone);
+      if (nationality) applicantPayload.nationality = String(nationality);
+      if (passportNumber) applicantPayload.passportNumber = String(passportNumber);
 
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        dob: '',
-        gender: '',
-        nationality: '',
-        passportNumber: '',
-        passportExpiry: '',
-        groupId: '',
+      // Create applicant via API (axios handles auth)
+      const resp = await applicantsApi.create(applicantPayload);
+      const created = resp.data || {};
+      const applicantId = created.id || created.data?.id || created["id"] || created["_id"];
+      if (!applicantId) {
+        // Try common shapes
+        const maybeId = resp.data?.data?.id || resp.data?.data?.id;
+        if (maybeId) {
+          uploadFormData.append('applicantId', String(maybeId));
+        }
+      } else {
+        uploadFormData.append('applicantId', String(applicantId));
+      }
+
+      // Ensure groupId exists on form data
+      if (!uploadFormData.get('groupId') && applicantPayload.groupId) {
+        uploadFormData.append('groupId', applicantPayload.groupId);
+      }
+
+      // Get token from sessionStorage or localStorage
+      let token = '';
+      if (typeof window !== 'undefined') {
+        const stored = sessionStorage.getItem('visaflow-auth');
+        if (stored) {
+          try {
+            token = JSON.parse(stored)?.state?.token || '';
+          } catch {}
+        }
+        if (!token) token = localStorage.getItem('token') || '';
+      }
+
+      // Post visa form (multipart)
+      const response = await fetch('/api/visa-forms', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: uploadFormData,
       });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ message: 'Failed to save visa form' }));
+        throw new Error(err.message || 'Failed to save visa form');
+      }
+
+      // Success
       onSuccess();
     } catch (err: any) {
-      const errorMsg = err.response?.data?.message || err.response?.data?.details?.[0]?.message || 'Failed to create applicant';
-      setError(errorMsg);
+      setError(err.message || 'Failed to create applicant and save visa form');
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -490,140 +493,30 @@ function CreateApplicantModal({
             exit={{ opacity: 0, scale: 0.95 }}
             className="fixed inset-0 flex items-center justify-center z-50 p-4"
           >
-            <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-              <div className="p-6 border-b border-gray-100">
-                <h2 className="text-lg font-semibold text-gray-900">Add New Applicant</h2>
-                <p className="text-sm text-gray-500 mt-1">Enter applicant details</p>
+            <div className="bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Add New Applicant — Full Form</h2>
+                  <p className="text-sm text-gray-500 mt-1">Complete applicant and visa form fields</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={onClose} className="btn-secondary">Cancel</button>
+                </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto">
                 {error && (
-                  <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm">{error}</div>
+                  <div className="m-4 p-3 rounded-lg bg-red-50 text-red-600 text-sm">{error}</div>
                 )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Group *</label>
-                  <select
-                    value={formData.groupId}
-                    onChange={(e) => setFormData({ ...formData, groupId: e.target.value })}
-                    className="input"
-                    required
-                  >
-                    <option value="">Select group</option>
-                    {groups.map((group) => (
-                      <option key={group.id} value={group.id}>
-                        {group.code} - {group.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">First Name *</label>
-                    <input
-                      type="text"
-                      value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      className="input"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Last Name *</label>
-                    <input
-                      type="text"
-                      value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      className="input"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="input"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="input"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Date of Birth</label>
-                    <input
-                      type="date"
-                      value={formData.dob}
-                      onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                      className="input"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Gender</label>
-                    <select
-                      value={formData.gender}
-                      onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                      className="input"
-                    >
-                      <option value="">Select</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Nationality</label>
-                    <input
-                      type="text"
-                      value={formData.nationality}
-                      onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                      className="input"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Passport Number</label>
-                    <input
-                      type="text"
-                      value={formData.passportNumber}
-                      onChange={(e) => setFormData({ ...formData, passportNumber: e.target.value })}
-                      className="input"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Passport Expiry</label>
-                    <input
-                      type="date"
-                      value={formData.passportExpiry}
-                      onChange={(e) => setFormData({ ...formData, passportExpiry: e.target.value })}
-                      className="input"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 pt-4">
-                  <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
-                  <button type="submit" disabled={loading} className="btn-primary flex-1">
-                    {loading ? 'Adding...' : 'Add Applicant'}
-                  </button>
-                </div>
-              </form>
+                <VisaApplicationForm
+                  inline
+                  initialData={{ groupId: defaultGroupId || '' }}
+                  onSubmit={async (uploadFormData) => {
+                    await handleVisaSubmit(uploadFormData);
+                  }}
+                />
+              </div>
             </div>
           </motion.div>
         </>

@@ -56,7 +56,6 @@ export declare class VisaApplicationService {
             otherNationality: string | null;
             otherNationalityIdNumber: string | null;
             otherNationalityPassportNumber: string | null;
-            otherNationalityNotProvidedReason: string | null;
             hasPermanentResidence: boolean;
             permanentResidenceCountries: string | null;
             hasFormerNationality: boolean;
@@ -85,19 +84,16 @@ export declare class VisaApplicationService {
             spouseLastName: string | null;
             spouseDateOfBirth: Date | null;
             spouseCountryOfBirth: string | null;
-            spouseCityOfBirth: string | null;
             spouseAddress: string | null;
             spouseOccupation: string | null;
             fatherFirstName: string | null;
             fatherLastName: string | null;
             fatherNationality: string | null;
             fatherDateOfBirth: Date | null;
-            fatherStillLiving: boolean | null;
             motherFirstName: string | null;
             motherLastName: string | null;
             motherNationality: string | null;
             motherDateOfBirth: Date | null;
-            motherStillLiving: boolean | null;
             children: import("@prisma/client/runtime/library").JsonValue | null;
             emergencyFirstName: string | null;
             emergencyLastName: string | null;
@@ -108,6 +104,10 @@ export declare class VisaApplicationService {
             hasValidVisas: boolean;
             validVisaCountries: string | null;
             countriesVisitedLast12Months: string | null;
+            otherNationalityNotProvidedReason: string | null;
+            spouseCityOfBirth: string | null;
+            fatherStillLiving: boolean | null;
+            motherStillLiving: boolean | null;
         };
         batchTemplate: {
             id: string;
@@ -210,7 +210,6 @@ export declare class VisaApplicationService {
             otherNationality: string | null;
             otherNationalityIdNumber: string | null;
             otherNationalityPassportNumber: string | null;
-            otherNationalityNotProvidedReason: string | null;
             hasPermanentResidence: boolean;
             permanentResidenceCountries: string | null;
             hasFormerNationality: boolean;
@@ -239,19 +238,16 @@ export declare class VisaApplicationService {
             spouseLastName: string | null;
             spouseDateOfBirth: Date | null;
             spouseCountryOfBirth: string | null;
-            spouseCityOfBirth: string | null;
             spouseAddress: string | null;
             spouseOccupation: string | null;
             fatherFirstName: string | null;
             fatherLastName: string | null;
             fatherNationality: string | null;
             fatherDateOfBirth: Date | null;
-            fatherStillLiving: boolean | null;
             motherFirstName: string | null;
             motherLastName: string | null;
             motherNationality: string | null;
             motherDateOfBirth: Date | null;
-            motherStillLiving: boolean | null;
             children: import("@prisma/client/runtime/library").JsonValue | null;
             emergencyFirstName: string | null;
             emergencyLastName: string | null;
@@ -262,6 +258,10 @@ export declare class VisaApplicationService {
             hasValidVisas: boolean;
             validVisaCountries: string | null;
             countriesVisitedLast12Months: string | null;
+            otherNationalityNotProvidedReason: string | null;
+            spouseCityOfBirth: string | null;
+            fatherStillLiving: boolean | null;
+            motherStillLiving: boolean | null;
         };
     } & {
         id: string;

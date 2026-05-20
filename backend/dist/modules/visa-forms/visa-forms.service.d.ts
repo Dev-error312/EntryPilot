@@ -22,7 +22,6 @@ export declare class VisaFormsService {
         otherNationality: string | null;
         otherNationalityIdNumber: string | null;
         otherNationalityPassportNumber: string | null;
-        otherNationalityNotProvidedReason: string | null;
         hasPermanentResidence: boolean;
         permanentResidenceCountries: string | null;
         hasFormerNationality: boolean;
@@ -51,19 +50,16 @@ export declare class VisaFormsService {
         spouseLastName: string | null;
         spouseDateOfBirth: Date | null;
         spouseCountryOfBirth: string | null;
-        spouseCityOfBirth: string | null;
         spouseAddress: string | null;
         spouseOccupation: string | null;
         fatherFirstName: string | null;
         fatherLastName: string | null;
         fatherNationality: string | null;
         fatherDateOfBirth: Date | null;
-        fatherStillLiving: boolean | null;
         motherFirstName: string | null;
         motherLastName: string | null;
         motherNationality: string | null;
         motherDateOfBirth: Date | null;
-        motherStillLiving: boolean | null;
         children: import("@prisma/client/runtime/library").JsonValue | null;
         emergencyFirstName: string | null;
         emergencyLastName: string | null;
@@ -74,6 +70,10 @@ export declare class VisaFormsService {
         hasValidVisas: boolean;
         validVisaCountries: string | null;
         countriesVisitedLast12Months: string | null;
+        otherNationalityNotProvidedReason: string | null;
+        spouseCityOfBirth: string | null;
+        fatherStillLiving: boolean | null;
+        motherStillLiving: boolean | null;
     }>;
     updateVisaForm(id: string, data: any, organizationId: string): Promise<{
         id: string;
@@ -98,7 +98,6 @@ export declare class VisaFormsService {
         otherNationality: string | null;
         otherNationalityIdNumber: string | null;
         otherNationalityPassportNumber: string | null;
-        otherNationalityNotProvidedReason: string | null;
         hasPermanentResidence: boolean;
         permanentResidenceCountries: string | null;
         hasFormerNationality: boolean;
@@ -127,19 +126,16 @@ export declare class VisaFormsService {
         spouseLastName: string | null;
         spouseDateOfBirth: Date | null;
         spouseCountryOfBirth: string | null;
-        spouseCityOfBirth: string | null;
         spouseAddress: string | null;
         spouseOccupation: string | null;
         fatherFirstName: string | null;
         fatherLastName: string | null;
         fatherNationality: string | null;
         fatherDateOfBirth: Date | null;
-        fatherStillLiving: boolean | null;
         motherFirstName: string | null;
         motherLastName: string | null;
         motherNationality: string | null;
         motherDateOfBirth: Date | null;
-        motherStillLiving: boolean | null;
         children: import("@prisma/client/runtime/library").JsonValue | null;
         emergencyFirstName: string | null;
         emergencyLastName: string | null;
@@ -150,6 +146,10 @@ export declare class VisaFormsService {
         hasValidVisas: boolean;
         validVisaCountries: string | null;
         countriesVisitedLast12Months: string | null;
+        otherNationalityNotProvidedReason: string | null;
+        spouseCityOfBirth: string | null;
+        fatherStillLiving: boolean | null;
+        motherStillLiving: boolean | null;
     }>;
     getVisaForm(id: string, organizationId: string): Promise<{
         id: string;
@@ -174,7 +174,6 @@ export declare class VisaFormsService {
         otherNationality: string | null;
         otherNationalityIdNumber: string | null;
         otherNationalityPassportNumber: string | null;
-        otherNationalityNotProvidedReason: string | null;
         hasPermanentResidence: boolean;
         permanentResidenceCountries: string | null;
         hasFormerNationality: boolean;
@@ -203,19 +202,16 @@ export declare class VisaFormsService {
         spouseLastName: string | null;
         spouseDateOfBirth: Date | null;
         spouseCountryOfBirth: string | null;
-        spouseCityOfBirth: string | null;
         spouseAddress: string | null;
         spouseOccupation: string | null;
         fatherFirstName: string | null;
         fatherLastName: string | null;
         fatherNationality: string | null;
         fatherDateOfBirth: Date | null;
-        fatherStillLiving: boolean | null;
         motherFirstName: string | null;
         motherLastName: string | null;
         motherNationality: string | null;
         motherDateOfBirth: Date | null;
-        motherStillLiving: boolean | null;
         children: import("@prisma/client/runtime/library").JsonValue | null;
         emergencyFirstName: string | null;
         emergencyLastName: string | null;
@@ -226,6 +222,10 @@ export declare class VisaFormsService {
         hasValidVisas: boolean;
         validVisaCountries: string | null;
         countriesVisitedLast12Months: string | null;
+        otherNationalityNotProvidedReason: string | null;
+        spouseCityOfBirth: string | null;
+        fatherStillLiving: boolean | null;
+        motherStillLiving: boolean | null;
     } | null>;
     listVisaForms(organizationId: string, groupId?: string): Promise<{
         id: string;
@@ -250,7 +250,6 @@ export declare class VisaFormsService {
         otherNationality: string | null;
         otherNationalityIdNumber: string | null;
         otherNationalityPassportNumber: string | null;
-        otherNationalityNotProvidedReason: string | null;
         hasPermanentResidence: boolean;
         permanentResidenceCountries: string | null;
         hasFormerNationality: boolean;
@@ -279,19 +278,16 @@ export declare class VisaFormsService {
         spouseLastName: string | null;
         spouseDateOfBirth: Date | null;
         spouseCountryOfBirth: string | null;
-        spouseCityOfBirth: string | null;
         spouseAddress: string | null;
         spouseOccupation: string | null;
         fatherFirstName: string | null;
         fatherLastName: string | null;
         fatherNationality: string | null;
         fatherDateOfBirth: Date | null;
-        fatherStillLiving: boolean | null;
         motherFirstName: string | null;
         motherLastName: string | null;
         motherNationality: string | null;
         motherDateOfBirth: Date | null;
-        motherStillLiving: boolean | null;
         children: import("@prisma/client/runtime/library").JsonValue | null;
         emergencyFirstName: string | null;
         emergencyLastName: string | null;
@@ -302,6 +298,10 @@ export declare class VisaFormsService {
         hasValidVisas: boolean;
         validVisaCountries: string | null;
         countriesVisitedLast12Months: string | null;
+        otherNationalityNotProvidedReason: string | null;
+        spouseCityOfBirth: string | null;
+        fatherStillLiving: boolean | null;
+        motherStillLiving: boolean | null;
     }[]>;
     submitVisaForm(id: string, organizationId: string): Promise<{
         id: string;
@@ -326,7 +326,6 @@ export declare class VisaFormsService {
         otherNationality: string | null;
         otherNationalityIdNumber: string | null;
         otherNationalityPassportNumber: string | null;
-        otherNationalityNotProvidedReason: string | null;
         hasPermanentResidence: boolean;
         permanentResidenceCountries: string | null;
         hasFormerNationality: boolean;
@@ -355,19 +354,16 @@ export declare class VisaFormsService {
         spouseLastName: string | null;
         spouseDateOfBirth: Date | null;
         spouseCountryOfBirth: string | null;
-        spouseCityOfBirth: string | null;
         spouseAddress: string | null;
         spouseOccupation: string | null;
         fatherFirstName: string | null;
         fatherLastName: string | null;
         fatherNationality: string | null;
         fatherDateOfBirth: Date | null;
-        fatherStillLiving: boolean | null;
         motherFirstName: string | null;
         motherLastName: string | null;
         motherNationality: string | null;
         motherDateOfBirth: Date | null;
-        motherStillLiving: boolean | null;
         children: import("@prisma/client/runtime/library").JsonValue | null;
         emergencyFirstName: string | null;
         emergencyLastName: string | null;
@@ -378,6 +374,10 @@ export declare class VisaFormsService {
         hasValidVisas: boolean;
         validVisaCountries: string | null;
         countriesVisitedLast12Months: string | null;
+        otherNationalityNotProvidedReason: string | null;
+        spouseCityOfBirth: string | null;
+        fatherStillLiving: boolean | null;
+        motherStillLiving: boolean | null;
     }>;
     deleteVisaForm(id: string, organizationId: string): Promise<{
         id: string;
@@ -402,7 +402,6 @@ export declare class VisaFormsService {
         otherNationality: string | null;
         otherNationalityIdNumber: string | null;
         otherNationalityPassportNumber: string | null;
-        otherNationalityNotProvidedReason: string | null;
         hasPermanentResidence: boolean;
         permanentResidenceCountries: string | null;
         hasFormerNationality: boolean;
@@ -431,19 +430,16 @@ export declare class VisaFormsService {
         spouseLastName: string | null;
         spouseDateOfBirth: Date | null;
         spouseCountryOfBirth: string | null;
-        spouseCityOfBirth: string | null;
         spouseAddress: string | null;
         spouseOccupation: string | null;
         fatherFirstName: string | null;
         fatherLastName: string | null;
         fatherNationality: string | null;
         fatherDateOfBirth: Date | null;
-        fatherStillLiving: boolean | null;
         motherFirstName: string | null;
         motherLastName: string | null;
         motherNationality: string | null;
         motherDateOfBirth: Date | null;
-        motherStillLiving: boolean | null;
         children: import("@prisma/client/runtime/library").JsonValue | null;
         emergencyFirstName: string | null;
         emergencyLastName: string | null;
@@ -454,6 +450,10 @@ export declare class VisaFormsService {
         hasValidVisas: boolean;
         validVisaCountries: string | null;
         countriesVisitedLast12Months: string | null;
+        otherNationalityNotProvidedReason: string | null;
+        spouseCityOfBirth: string | null;
+        fatherStillLiving: boolean | null;
+        motherStillLiving: boolean | null;
     }>;
 }
 export declare const visaFormsService: VisaFormsService;

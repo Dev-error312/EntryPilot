@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ApplicantDraftService = void 0;
+const visa_application_fields_1 = require("./visa-application-fields");
 /**
  * Applicant Draft Service
  * Manages the manual correction queue for imported applicants
@@ -139,6 +140,94 @@ class ApplicantDraftService {
                     }
                 }
             });
+            // Create visa application form from draft data so it's submission-ready
+            try {
+                const visaPayload = {
+                    organizationId,
+                    groupId,
+                    applicantId: applicant.id,
+                    status: 'READY'
+                };
+                // Map fields using VISA_APPLICATION_FIELDS
+                for (const field of visa_application_fields_1.VISA_APPLICATION_FIELDS) {
+                    const raw = finalData[field.id] ?? finalData[field.name] ?? null;
+                    if (raw === undefined || raw === null)
+                        continue;
+                    // Skip file fields here (handled as documents)
+                    if (field.type === 'file')
+                        continue;
+                    visaPayload[field.name] = (0, visa_application_fields_1.formatFieldValue)(field, raw);
+                }
+                // Fallback mappings from parser-style keys
+                if (!visaPayload.placeOfBirthCountry && finalData.place_of_birth_country) {
+                    visaPayload.placeOfBirthCountry = finalData.place_of_birth_country;
+                }
+                if (!visaPayload.placeOfBirthProvince && finalData.place_of_birth_province) {
+                    visaPayload.placeOfBirthProvince = finalData.place_of_birth_province;
+                }
+                if (!visaPayload.placeOfBirthCity && finalData.place_of_birth_city) {
+                    visaPayload.placeOfBirthCity = finalData.place_of_birth_city;
+                }
+                if (!visaPayload.maritalStatus && finalData.marital_status) {
+                    visaPayload.maritalStatus = finalData.marital_status;
+                }
+                if (!visaPayload.currentOccupation && finalData.occupation) {
+                    visaPayload.currentOccupation = finalData.occupation;
+                }
+                if (!visaPayload.companyName && finalData.employer_name) {
+                    visaPayload.companyName = finalData.employer_name;
+                }
+                if (!visaPayload.companyPhone && finalData.employer_phone) {
+                    visaPayload.companyPhone = finalData.employer_phone;
+                }
+                if (!visaPayload.companyAddress && finalData.employer_address) {
+                    visaPayload.companyAddress = finalData.employer_address;
+                }
+                if (!visaPayload.residenceStreet && finalData.residential_address) {
+                    visaPayload.residenceStreet = finalData.residential_address;
+                }
+                if (!visaPayload.residenceMobilePhone && finalData.phone_number) {
+                    visaPayload.residenceMobilePhone = finalData.phone_number;
+                }
+                if (!visaPayload.residenceEmail && finalData.email) {
+                    visaPayload.residenceEmail = finalData.email;
+                }
+                if (!visaPayload.residenceCountry && finalData.current_nationality) {
+                    visaPayload.residenceCountry = finalData.current_nationality;
+                }
+                if (!visaPayload.formerNationality && finalData.former_nationality) {
+                    visaPayload.formerNationality = finalData.former_nationality;
+                }
+                if (!visaPayload.emergencyFirstName && finalData.emergency_contact_name) {
+                    const parts = String(finalData.emergency_contact_name).split(/\s+/);
+                    visaPayload.emergencyFirstName = parts.shift() || null;
+                    visaPayload.emergencyLastName = parts.join(' ') || null;
+                }
+                if (!visaPayload.emergencyPhone && finalData.emergency_contact_phone) {
+                    visaPayload.emergencyPhone = finalData.emergency_contact_phone;
+                }
+                if (!visaPayload.emergencyRelationship && finalData.emergency_contact_relationship) {
+                    visaPayload.emergencyRelationship = finalData.emergency_contact_relationship;
+                }
+                // Ensure required fields for visa form record
+                if (!visaPayload.fullName) {
+                    visaPayload.fullName = `${applicant.firstName || ''} ${applicant.lastName || ''}`.trim() || 'Unknown Applicant';
+                }
+                await tx.visaApplicationForm.create({ data: visaPayload });
+            }
+            catch (err) {
+                // Don't fail the whole transaction if visa form creation fails; record audit
+                await tx.auditLog.create({
+                    data: {
+                        action: 'VISA_FORM_CREATE_FAILED',
+                        entityType: 'ApplicantDraft',
+                        entityId: draftId,
+                        newValues: { error: String(err) },
+                        userId,
+                        organizationId
+                    }
+                });
+            }
             // Update draft status
             await tx.applicantDraft.update({
                 where: { id: draftId },

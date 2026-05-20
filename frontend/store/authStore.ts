@@ -119,8 +119,8 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-      onRehydrateStorage: () => (state) => {
-        return (inboundState) => {
+      onRehydrateStorage: () => (state: any) => {
+        return (inboundState: any) => {
           try {
             // If we just logged in, skip applying persisted inbound state (it may be stale)
             if (typeof window !== 'undefined' && (window as any).__authJustLoggedIn) {

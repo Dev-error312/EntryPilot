@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Visa Form Preview</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial; background:#f8fafc;padding:32px}
+    .card{background:#fff;border:1px solid #e6eaf0;border-radius:12px;padding:24px;max-width:900px;margin:0 auto}
+    h1{font-size:22px;margin-bottom:6px}
+    p.small{color:#6b7280;margin-top:0}
+    .progress{height:10px;background:#e6eaf0;border-radius:999px;overflow:hidden;margin:16px 0}
+    .progress > i{display:block;height:100%;background:#2563eb;width:40%}
+    label{display:block;font-size:13px;color:#374151;margin-bottom:6px}
+    input[type=text], input[type=email], input[type=date], select{width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:12px}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    .btn{background:#2563eb;color:#fff;padding:10px 14px;border-radius:8px;border:none;cursor:pointer}
+    .muted{color:#6b7280}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>China Visa Application</h1>
+    <p class="small">Complete all required fields marked with *</p>
+    <div class="progress"><i></i></div>
+
+    <h2 style="font-size:16px;margin-top:8px">Section 1 — Documents</h2>
+    <p class="muted">Upload passport photo and blank passport pages.</p>
+    <div style="border:1px dashed #d1d5db;padding:16px;border-radius:8px;margin-bottom:16px">Click to upload visa photo (preview)</div>
+
+    <h2 style="font-size:16px;margin-top:8px">Section 2 — Personal Info</h2>
+    <div class="grid">
+      <div>
+        <label>Full Name *</label>
+        <input type="text" value="John Doe" />
+      </div>
+      <div>
+        <label>Place of Birth Country *</label>
+        <input type="text" value="Kenya" />
+      </div>
+      <div>
+        <label>Marital Status *</label>
+        <select><option>Single</option><option>Married</option></select>
+      </div>
+      <div>
+        <label>Current Occupation *</label>
+        <input type="text" value="Teacher" />
+      </div>
+    </div>
+
+    <h2 style="font-size:16px;margin-top:8px">Section 6 — Residence</h2>
+    <div class="grid">
+      <div>
+        <label>Residence Country *</label>
+        <input type="text" value="Kenya" />
+      </div>
+      <div>
+        <label>Residence Mobile Phone *</label>
+        <input type="text" value="+254700000000" />
+      </div>
+      <div style="grid-column:1 / -1">
+        <label>Residence Email *</label>
+        <input type="email" value="john@example.com" />
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;margin-top:18px">
+      <button class="btn" onclick="alert('Prev')">Previous</button>
+      <button class="btn" onclick="alert('Next')">Next</button>
+    </div>
+  </div>
+</body>
+</html>

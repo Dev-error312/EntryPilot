@@ -701,9 +701,23 @@ function getAllSections() {
 function formatFieldValue(field, value) {
     if (!value)
         return null;
+    const BOOLEAN_FIELDS = new Set([
+        'hasOtherNationality',
+        'hasPermanentResidence',
+        'hasFormerNationality',
+        'hasBeenToChina',
+        'hasValidVisas',
+    ]);
+    if (BOOLEAN_FIELDS.has(field.name)) {
+        const normalized = String(value).toLowerCase().trim();
+        return ['yes', 'true', '1', 'y'].includes(normalized);
+    }
     switch (field.type) {
         case 'date':
-            return new Date(value);
+            {
+                const dt = new Date(value);
+                return isNaN(dt.getTime()) ? null : dt;
+            }
         case 'phone':
             return String(value).replace(/[^\d+\-\s()]/g, '');
         case 'email':

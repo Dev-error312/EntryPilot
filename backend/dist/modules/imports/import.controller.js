@@ -43,6 +43,7 @@ const promises_1 = __importDefault(require("fs/promises"));
 const XLSX = __importStar(require("xlsx"));
 const china_visa_parser_1 = require("./china-visa-parser");
 const china_visa_fields_1 = require("./china-visa-fields");
+const visa_application_fields_1 = require("./visa-application-fields");
 const applicant_draft_service_1 = require("./applicant-draft.service");
 // Ensure uploads directory exists
 const UPLOADS_DIR = path_1.default.join(process.cwd(), 'uploads');
@@ -818,6 +819,77 @@ class ImportController {
                             },
                         }
                     });
+                    // Create a submission-ready visa form from imported data
+                    const visaPayload = {
+                        organizationId: orgId,
+                        groupId,
+                        applicantId: applicant.id,
+                        status: 'READY',
+                    };
+                    for (const field of visa_application_fields_1.VISA_APPLICATION_FIELDS) {
+                        const raw = parsed.data?.[field.id] ?? parsed.data?.[field.name] ?? null;
+                        if (raw === undefined || raw === null)
+                            continue;
+                        if (field.type === 'file')
+                            continue;
+                        visaPayload[field.name] = (0, visa_application_fields_1.formatFieldValue)(field, raw);
+                    }
+                    // Fallback mappings from China parser keys
+                    if (!visaPayload.fullName) {
+                        const full = `${applicantData.firstName || ''} ${applicantData.lastName || ''}`.trim();
+                        visaPayload.fullName = full || 'Unknown Applicant';
+                    }
+                    if (!visaPayload.placeOfBirthCountry && parsed.data?.place_of_birth_country) {
+                        visaPayload.placeOfBirthCountry = parsed.data.place_of_birth_country;
+                    }
+                    if (!visaPayload.placeOfBirthProvince && parsed.data?.place_of_birth_province) {
+                        visaPayload.placeOfBirthProvince = parsed.data.place_of_birth_province;
+                    }
+                    if (!visaPayload.placeOfBirthCity && parsed.data?.place_of_birth_city) {
+                        visaPayload.placeOfBirthCity = parsed.data.place_of_birth_city;
+                    }
+                    if (!visaPayload.currentOccupation && parsed.data?.occupation) {
+                        visaPayload.currentOccupation = parsed.data.occupation;
+                    }
+                    if (!visaPayload.companyName && parsed.data?.employer_name) {
+                        visaPayload.companyName = parsed.data.employer_name;
+                    }
+                    if (!visaPayload.companyPhone && parsed.data?.employer_phone) {
+                        visaPayload.companyPhone = parsed.data.employer_phone;
+                    }
+                    if (!visaPayload.companyAddress && parsed.data?.employer_address) {
+                        visaPayload.companyAddress = parsed.data.employer_address;
+                    }
+                    if (!visaPayload.residenceStreet && parsed.data?.residential_address) {
+                        visaPayload.residenceStreet = parsed.data.residential_address;
+                    }
+                    if (!visaPayload.residenceMobilePhone && parsed.data?.phone_number) {
+                        visaPayload.residenceMobilePhone = parsed.data.phone_number;
+                    }
+                    if (!visaPayload.residenceEmail && parsed.data?.email) {
+                        visaPayload.residenceEmail = parsed.data.email;
+                    }
+                    if (!visaPayload.residenceCountry && parsed.data?.current_nationality) {
+                        visaPayload.residenceCountry = parsed.data.current_nationality;
+                    }
+                    if (!visaPayload.maritalStatus && parsed.data?.marital_status) {
+                        visaPayload.maritalStatus = parsed.data.marital_status;
+                    }
+                    if (!visaPayload.formerNationality && parsed.data?.former_nationality) {
+                        visaPayload.formerNationality = parsed.data.former_nationality;
+                    }
+                    if (!visaPayload.emergencyFirstName && parsed.data?.emergency_contact_name) {
+                        const parts = String(parsed.data.emergency_contact_name).split(/\s+/);
+                        visaPayload.emergencyFirstName = parts.shift() || null;
+                        visaPayload.emergencyLastName = parts.join(' ') || null;
+                    }
+                    if (!visaPayload.emergencyPhone && parsed.data?.emergency_contact_phone) {
+                        visaPayload.emergencyPhone = parsed.data.emergency_contact_phone;
+                    }
+                    if (!visaPayload.emergencyRelationship && parsed.data?.emergency_contact_relationship) {
+                        visaPayload.emergencyRelationship = parsed.data.emergency_contact_relationship;
+                    }
+                    await tx.visaApplicationForm.create({ data: visaPayload });
                     await tx.auditLog.create({
                         data: {
                             action: 'IMPORT_APPLICANT',

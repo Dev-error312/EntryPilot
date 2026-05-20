@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { applicantsApi, visaFormsApi } from '@/lib/api';
+import VisaApplicationForm from '@/components/VisaApplicationForm';
 import { format } from 'date-fns';
 
 interface Application {
@@ -443,7 +444,21 @@ export default function ApplicantDetailPage() {
         )}
 
         <div ref={visaFormSectionRef}>
-          <VisaFormDraftPanel applicant={applicant} visible={showVisaForm} />
+          {showVisaForm ? (
+            <VisaApplicationForm
+              inline
+              initialData={{
+                fullName: `${applicant.firstName} ${applicant.lastName}`,
+                placeOfBirthCountry: applicant.nationality || applicant.country || '',
+                residenceCountry: applicant.country || applicant.nationality || '',
+                residenceMobilePhone: applicant.phone || '',
+                residenceEmail: applicant.email || '',
+                groupId: applicant.group.id,
+              }}
+            />
+          ) : (
+            <VisaFormDraftPanel applicant={applicant} visible={showVisaForm} />
+          )}
         </div>
       </div>
     </DashboardLayout>
