@@ -1,95 +1,59 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { BatchTemplateService } from './batch-template.service';
+import { FastifyRequest, FastifyReply } from 'fastify';
+import { batchTemplateService } from './batch-template.service';
 
 export class BatchTemplateController {
-  private service: BatchTemplateService;
-
-  constructor(private server: FastifyInstance) {
-    this.service = new BatchTemplateService(this.server.prisma);
+  async create(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const user = request.user as any;
+      const template = await batchTemplateService.create(request.body, user.organizationId);
+      reply.code(201).send({ success: true, data: template });
+    } catch (error: any) {
+      reply.code(400).send({ success: false, error: error.message });
+    }
   }
 
-  createTemplate = async (request: FastifyRequest, reply: FastifyReply) => {
+  async get(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { organizationId, id: userId } = request.user as any;
-      const data = request.body as any;
-
-      const template = await this.service.createTemplate(
-        data,
-        organizationId,
-        data.groupId,
-        userId
-      );
-
-      return reply.status(201).send({ success: true, template });
+      const user = request.user as any;
+      const { id } = request.params as any;
+      const template = await batchTemplateService.get(id, user.organizationId);
+      if (!template) return reply.code(404).send({ success: false, error: 'Template not found' });
+      reply.send({ success: true, data: template });
     } catch (error: any) {
-      return reply.status(500).send({ success: false, error: error.message });
+      reply.code(400).send({ success: false, error: error.message });
     }
-  };
+  }
 
-  listTemplates = async (request: FastifyRequest, reply: FastifyReply) => {
+  async list(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { organizationId } = request.user as any;
-      const { page = 1, limit = 20, groupId } = request.query as any;
-
-      const result = await this.service.listTemplates(
-        organizationId,
-        groupId,
-        parseInt(page),
-        parseInt(limit)
-      );
-
-      return reply.send({ success: true, data: result });
+      const user = request.user as any;
+      const { groupId } = request.query as any;
+      const templates = await batchTemplateService.list(user.organizationId, groupId);
+      reply.send({ success: true, data: templates, count: templates.length });
     } catch (error: any) {
-      return reply.status(500).send({ success: false, error: error.message });
+      reply.code(400).send({ success: false, error: error.message });
     }
-  };
+  }
 
-  getTemplate = async (request: FastifyRequest, reply: FastifyReply) => {
+  async update(request: FastifyRequest, reply: FastifyReply) {
     try {
       const { id } = request.params as any;
-      const template = await this.service.getTemplate(id);
-
-      if (!template) {
-        return reply.status(404).send({ success: false, error: 'Template not found' });
-      }
-
-      return reply.send({ success: true, template });
+      const template = await batchTemplateService.update(id, request.body);
+      reply.send({ success: true, data: template });
     } catch (error: any) {
-      return reply.status(500).send({ success: false, error: error.message });
+      reply.code(400).send({ success: false, error: error.message });
     }
-  };
+  }
 
-  updateTemplate = async (request: FastifyRequest, reply: FastifyReply) => {
+  async delete(request: FastifyRequest, reply: FastifyReply) {
     try {
       const { id } = request.params as any;
-      const data = request.body as any;
-
-      const template = await this.service.updateTemplate(id, data);
-      return reply.send({ success: true, template });
+      await batchTemplateService.delete(id);
+      reply.send({ success: true, message: 'Template deleted' });
     } catch (error: any) {
-      return reply.status(500).send({ success: false, error: error.message });
+      reply.code(400).send({ success: false, error: error.message });
     }
-  };
-
-  deleteTemplate = async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { id } = request.params as any;
-      await this.service.deleteTemplate(id);
-
-      return reply.send({ success: true });
-    } catch (error: any) {
-      return reply.status(500).send({ success: false, error: error.message });
-    }
-  };
-
-  getGroupTemplates = async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { groupId } = request.params as any;
-      const templates = await this.service.getTemplatesByGroup(groupId);
-
-      return reply.send({ success: true, templates });
-    } catch (error: any) {
-      return reply.status(500).send({ success: false, error: error.message });
-    }
-  };
+  }
 }
+
+export const batchTemplateController = new BatchTemplateController();

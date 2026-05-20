@@ -25,13 +25,21 @@ class AuthService {
             throw new Error('Invalid credentials');
         }
         // Generate tokens
-        const token = this.server.jwt.sign({
+        let token = this.server.jwt.sign({
             id: user.id,
             email: user.email,
             role: user.role,
             organizationId: user.organizationId
         }, { expiresIn: '24h' });
         const refreshToken = this.server.jwt.sign({ id: user.id, type: 'refresh' }, { expiresIn: '7d' });
+        // sanitize tokens to ensure no accidental whitespace/newlines
+        if (typeof token === 'string') {
+            token = token.replace(/\s+/g, '');
+        }
+        let cleanRefreshToken = refreshToken;
+        if (typeof refreshToken === 'string') {
+            cleanRefreshToken = refreshToken.replace(/\s+/g, '');
+        }
         // Create session
         const session = await this.server.prisma.session.create({
             data: {
@@ -47,7 +55,7 @@ class AuthService {
         });
         return {
             token,
-            refreshToken,
+            refreshToken: cleanRefreshToken,
             user: {
                 id: user.id,
                 email: user.email,

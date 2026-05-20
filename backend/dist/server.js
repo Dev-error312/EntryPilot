@@ -20,6 +20,10 @@ const import_routes_1 = require("./modules/imports/import.routes");
 const audit_routes_1 = require("./modules/audit/audit.routes");
 const dashboard_routes_1 = require("./modules/dashboard/dashboard.routes");
 const template_routes_2 = require("./modules/imports/template.routes");
+const visa_forms_routes_1 = require("./modules/visa-forms/visa-forms.routes");
+const batch_template_routes_1 = require("./modules/batch-templates/batch-template.routes");
+const visa_application_routes_1 = require("./modules/visa-applications/visa-application.routes");
+const visa_document_routes_1 = require("./modules/visa-documents/visa-document.routes");
 const auth_middleware_1 = require("./middleware/auth.middleware");
 const tenant_middleware_1 = require("./middleware/tenant.middleware");
 exports.prisma = new client_1.PrismaClient();
@@ -63,6 +67,10 @@ async function bootstrap() {
     await server.register(template_routes_2.templateRoutes, { prefix: '/api/imports/templates' });
     await server.register(audit_routes_1.auditRoutes, { prefix: '/api/audit' });
     await server.register(dashboard_routes_1.dashboardRoutes, { prefix: '/api/dashboard' });
+    await server.register(visa_forms_routes_1.visaFormsRoutes, { prefix: '/api/visa-forms' });
+    await server.register(batch_template_routes_1.batchTemplateRoutes, { prefix: '/api/batch-templates' });
+    await server.register(visa_application_routes_1.visaApplicationRoutes, { prefix: '/api/visa-applications' });
+    await server.register(visa_document_routes_1.visaDocumentRoutes, { prefix: '/api/visa-documents' });
     // Start server
     try {
         const port = parseInt(process.env.PORT || '4000', 10);

@@ -113,6 +113,15 @@ export const applicationsApi = {
   deliver: (id: string) => api.post(`/applications/${id}/deliver`),
 };
 
+export const visaFormsApi = {
+  create: (data: any) => api.post('/visa-forms', data),
+  list: (params?: any) => api.get('/visa-forms', { params }),
+  get: (id: string) => api.get(`/visa-forms/${id}`),
+  update: (id: string, data: any) => api.patch(`/visa-forms/${id}`, data),
+  submit: (id: string) => api.post(`/visa-forms/${id}/submit`),
+  delete: (id: string) => api.delete(`/visa-forms/${id}`),
+};
+
 export const templatesApi = {
   list: (params?: any) => api.get('/templates', { params }),
   listByCountry: (country: string) => api.get(`/templates/country/${country}`),

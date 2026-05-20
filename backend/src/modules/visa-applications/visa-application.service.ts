@@ -1,49 +1,73 @@
 import { PrismaClient } from '@prisma/client';
+import { visaMergerService } from './visa-merger.service';
+
+const prisma = new PrismaClient();
 
 export class VisaApplicationService {
-  constructor(private prisma: PrismaClient) {}
+  async createApplication(formId: string, templateId?: string, organizationId?: string) {
+    return visaMergerService.mergeFormAndTemplate(formId, templateId, organizationId);
+  }
 
-  async submitApplication(id: string) {
-    return this.prisma.completeVisaApplication.update({
-      where: { id },
-      data: { status: 'SUBMITTED', submittedAt: new Date() },
+  async get(id: string, organizationId: string) {
+    return prisma.completeVisaApplication.findFirst({
+      where: { id, organizationId },
+      include: { 
+        formData: true,
+        batchTemplate: true
+      }
     });
   }
 
-  async approveApplication(id: string, userId: string) {
-    return this.prisma.completeVisaApplication.update({
+  async list(organizationId: string, groupId?: string) {
+    return prisma.completeVisaApplication.findMany({
+      where: {
+        organizationId,
+        ...(groupId ? { groupId } : {})
+      },
+      include: { formData: true },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async updateStatus(id: string, status: string) {
+    return prisma.completeVisaApplication.update({
+      where: { id },
+      data: { status, updatedAt: new Date() }
+    });
+  }
+
+  async submitForReview(id: string, userId: string) {
+    return prisma.completeVisaApplication.update({
+      where: { id },
+      data: {
+        status: 'SUBMITTED',
+        submittedAt: new Date(),
+        reviewedByUserId: userId
+      }
+    });
+  }
+
+  async approve(id: string, userId: string) {
+    return prisma.completeVisaApplication.update({
       where: { id },
       data: {
         status: 'APPROVED',
         approvedAt: new Date(),
-        reviewedAt: new Date(),
-        reviewedByUserId: userId,
-      },
+        reviewedByUserId: userId
+      }
     });
   }
 
-  async deleteApplication(id: string) {
-    return this.prisma.completeVisaApplication.delete({
+  async reject(id: string, reason: string, userId: string) {
+    return prisma.completeVisaApplication.update({
       where: { id },
-    });
-  }
-
-  async getApplicationByReference(referenceNumber: string) {
-    return this.prisma.completeVisaApplication.findUnique({
-      where: { referenceNumber },
-      include: {
-        formData: true,
-        batchTemplate: true,
-        applicant: true,
-      },
-    });
-  }
-
-  async getApplicationsByApplicant(applicantId: string) {
-    return this.prisma.completeVisaApplication.findMany({
-      where: { applicantId },
-      orderBy: { createdAt: 'desc' },
-      include: { formData: true, batchTemplate: true },
+      data: {
+        status: 'REJECTED',
+        rejectionReason: reason,
+        reviewedByUserId: userId
+      }
     });
   }
 }
+
+export const visaApplicationService = new VisaApplicationService();

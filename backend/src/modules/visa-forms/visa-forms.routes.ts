@@ -1,13 +1,28 @@
 import { FastifyInstance } from 'fastify';
-import { VisaFormsController } from './visa-forms.controller';
+import { visaFormsController } from './visa-forms.controller';
 
-export async function visaFormsRoutes(server: FastifyInstance) {
-  const controller = new VisaFormsController(server);
+export async function visaFormsRoutes(app: FastifyInstance) {
+  app.post('/', {
+    onRequest: [app.authenticate]
+  }, (request, reply) => visaFormsController.create(request, reply));
 
-  server.post('/', { preHandler: [server.authenticate] }, controller.createForm);
-  server.get('/', { preHandler: [server.authenticate] }, controller.listForms);
-  server.get('/:id', { preHandler: [server.authenticate] }, controller.getForm);
-  server.put('/:id', { preHandler: [server.authenticate] }, controller.updateForm);
-  server.post('/:id/submit', { preHandler: [server.authenticate] }, controller.submitForm);
-  server.delete('/:id', { preHandler: [server.authenticate] }, controller.deleteForm);
+  app.get('/', {
+    onRequest: [app.authenticate]
+  }, (request, reply) => visaFormsController.list(request, reply));
+
+  app.get('/:id', {
+    onRequest: [app.authenticate]
+  }, (request, reply) => visaFormsController.get(request, reply));
+
+  app.patch('/:id', {
+    onRequest: [app.authenticate]
+  }, (request, reply) => visaFormsController.update(request, reply));
+
+  app.post('/:id/submit', {
+    onRequest: [app.authenticate]
+  }, (request, reply) => visaFormsController.submit(request, reply));
+
+  app.delete('/:id', {
+    onRequest: [app.authenticate]
+  }, (request, reply) => visaFormsController.delete(request, reply));
 }

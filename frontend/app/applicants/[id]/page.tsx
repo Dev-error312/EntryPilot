@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -16,7 +16,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { applicantsApi } from '@/lib/api';
+import { applicantsApi, visaFormsApi } from '@/lib/api';
 import { format } from 'date-fns';
 
 interface Application {
@@ -63,10 +63,12 @@ export default function ApplicantDetailPage() {
   const params = useParams();
   const router = useRouter();
   const applicantId = params.id as string;
+  const visaFormSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [applicant, setApplicant] = useState<Applicant | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showVisaForm, setShowVisaForm] = useState(false);
 
   useEffect(() => {
     loadApplicant();
@@ -137,6 +139,13 @@ export default function ApplicantDetailPage() {
     }
   };
 
+  const openVisaForm = () => {
+    setShowVisaForm(true);
+    window.requestAnimationFrame(() => {
+      visaFormSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
   return (
     <DashboardLayout
       title={`${applicant.firstName} ${applicant.lastName}`}
@@ -153,6 +162,10 @@ export default function ApplicantDetailPage() {
             Back
           </button>
           <div className="flex items-center gap-2">
+            <button onClick={openVisaForm} className="btn-primary flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Visa Form
+            </button>
             <button className="btn-secondary flex items-center gap-2">
               <Edit className="w-4 h-4" />
               Edit
@@ -428,7 +441,222 @@ export default function ApplicantDetailPage() {
             <p className="text-gray-700 whitespace-pre-wrap">{applicant.notes}</p>
           </motion.div>
         )}
+
+        <div ref={visaFormSectionRef}>
+          <VisaFormDraftPanel applicant={applicant} visible={showVisaForm} />
+        </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+function VisaFormDraftPanel({
+  applicant,
+  visible,
+}: {
+  applicant: Applicant;
+  visible: boolean;
+}) {
+  const [formData, setFormData] = useState({
+    fullName: `${applicant.firstName} ${applicant.lastName}`,
+    placeOfBirthCountry: applicant.nationality || applicant.country || '',
+    maritalStatus: 'Single',
+    currentOccupation: '',
+    residenceCountry: applicant.country || applicant.nationality || '',
+    residenceMobilePhone: applicant.phone || '',
+    residenceEmail: applicant.email || '',
+    emergencyFirstName: '',
+    emergencyLastName: '',
+    emergencyRelationship: '',
+    emergencyPhone: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const updateField = (field: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const submitDraft = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      if (!formData.fullName.trim()) {
+        throw new Error('Full name is required');
+      }
+
+      const payload = {
+        applicantId: applicant.id,
+        groupId: applicant.group.id,
+        fullName: formData.fullName.trim(),
+        placeOfBirthCountry: formData.placeOfBirthCountry.trim() || undefined,
+        maritalStatus: formData.maritalStatus,
+        currentOccupation: formData.currentOccupation.trim() || undefined,
+        residenceCountry: formData.residenceCountry.trim() || undefined,
+        residenceMobilePhone: formData.residenceMobilePhone.trim() || undefined,
+        residenceEmail: formData.residenceEmail.trim() || undefined,
+        emergencyFirstName: formData.emergencyFirstName.trim() || undefined,
+        emergencyLastName: formData.emergencyLastName.trim() || undefined,
+        emergencyRelationship: formData.emergencyRelationship.trim() || undefined,
+        emergencyPhone: formData.emergencyPhone.trim() || undefined,
+      };
+
+      const response = await visaFormsApi.create(payload);
+      setSuccess(`Visa form draft created successfully. Draft ID: ${response.data?.data?.id || 'saved'}`);
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to create visa form draft');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.45 }}
+      className={`card p-6 ${visible ? 'ring-2 ring-blue-100' : ''}`}
+    >
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">Visa Form</h2>
+          <p className="text-sm text-gray-600">
+            Create a draft for this applicant without leaving the applicant page.
+          </p>
+        </div>
+        <span className="badge badge-blue">Draft</span>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">{error}</div>
+      )}
+
+      {success && (
+        <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-700 text-sm">{success}</div>
+      )}
+
+      <form onSubmit={submitDraft} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name *</label>
+            <input
+              value={formData.fullName}
+              onChange={(e) => updateField('fullName', e.target.value)}
+              className="input"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Place of Birth Country</label>
+            <input
+              value={formData.placeOfBirthCountry}
+              onChange={(e) => updateField('placeOfBirthCountry', e.target.value)}
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Marital Status</label>
+            <select
+              value={formData.maritalStatus}
+              onChange={(e) => updateField('maritalStatus', e.target.value)}
+              className="input"
+            >
+              <option value="Single">Single</option>
+              <option value="Married">Married</option>
+              <option value="Divorced">Divorced</option>
+              <option value="Widowed">Widowed</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Occupation</label>
+            <input
+              value={formData.currentOccupation}
+              onChange={(e) => updateField('currentOccupation', e.target.value)}
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Residence Country</label>
+            <input
+              value={formData.residenceCountry}
+              onChange={(e) => updateField('residenceCountry', e.target.value)}
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Residence Mobile Phone</label>
+            <input
+              value={formData.residenceMobilePhone}
+              onChange={(e) => updateField('residenceMobilePhone', e.target.value)}
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Residence Email</label>
+            <input
+              type="email"
+              value={formData.residenceEmail}
+              onChange={(e) => updateField('residenceEmail', e.target.value)}
+              className="input"
+            />
+          </div>
+        </div>
+
+        <div className="border-t border-gray-100 pt-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Emergency Contact</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">First Name</label>
+              <input
+                value={formData.emergencyFirstName}
+                onChange={(e) => updateField('emergencyFirstName', e.target.value)}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Last Name</label>
+              <input
+                value={formData.emergencyLastName}
+                onChange={(e) => updateField('emergencyLastName', e.target.value)}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Relationship</label>
+              <input
+                value={formData.emergencyRelationship}
+                onChange={(e) => updateField('emergencyRelationship', e.target.value)}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
+              <input
+                value={formData.emergencyPhone}
+                onChange={(e) => updateField('emergencyPhone', e.target.value)}
+                className="input"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 pt-2">
+          <p className="text-sm text-gray-500">
+            The draft is attached to {applicant.firstName} {applicant.lastName} and their group.
+          </p>
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? 'Saving...' : 'Save Visa Draft'}
+          </button>
+        </div>
+      </form>
+    </motion.div>
   );
 }

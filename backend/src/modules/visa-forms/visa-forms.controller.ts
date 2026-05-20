@@ -1,94 +1,143 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { VisaFormsService } from './visa-forms.service';
+import { FastifyRequest, FastifyReply } from 'fastify';
+import { visaFormsService } from './visa-forms.service';
 
 export class VisaFormsController {
-  private service: VisaFormsService;
-
-  constructor(private server: FastifyInstance) {
-    this.service = new VisaFormsService(this.server.prisma);
-  }
-
-  createForm = async (request: FastifyRequest, reply: FastifyReply) => {
+  async create(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { organizationId } = request.user as any;
-      const data = request.body as any;
-
-      const errors = this.service.validateRequiredFields(data);
-      if (errors.length > 0) {
-        return reply.status(400).send({ success: false, errors });
-      }
-
-      const form = await this.service.createForm(data, organizationId, data.groupId);
-      return reply.status(201).send({ success: true, form });
-    } catch (error: any) {
-      return reply.status(500).send({ success: false, error: error.message });
-    }
-  };
-
-  listForms = async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { organizationId } = request.user as any;
-      const { page = 1, limit = 20, groupId } = request.query as any;
-
-      const result = await this.service.listForms(
-        organizationId,
-        groupId,
-        parseInt(page),
-        parseInt(limit)
+      const user = request.user as any;
+      const organizationId = user.organizationId;
+      
+      const visaForm = await visaFormsService.createVisaForm(
+        request.body,
+        organizationId
       );
 
-      return reply.send({ success: true, data: result });
+      reply.code(201).send({
+        success: true,
+        data: visaForm,
+        message: 'Visa form created successfully'
+      });
     } catch (error: any) {
-      return reply.status(500).send({ success: false, error: error.message });
+      reply.code(400).send({
+        success: false,
+        error: error.message
+      });
     }
-  };
+  }
 
-  getForm = async (request: FastifyRequest, reply: FastifyReply) => {
+  async get(request: FastifyRequest, reply: FastifyReply) {
     try {
+      const user = request.user as any;
+      const organizationId = user.organizationId;
       const { id } = request.params as any;
-      const form = await this.service.getForm(id);
 
-      if (!form) {
-        return reply.status(404).send({ success: false, error: 'Form not found' });
+      const visaForm = await visaFormsService.getVisaForm(id, organizationId);
+
+      if (!visaForm) {
+        return reply.code(404).send({
+          success: false,
+          error: 'Visa form not found'
+        });
       }
 
-      return reply.send({ success: true, form });
+      reply.send({
+        success: true,
+        data: visaForm
+      });
     } catch (error: any) {
-      return reply.status(500).send({ success: false, error: error.message });
+      reply.code(400).send({
+        success: false,
+        error: error.message
+      });
     }
-  };
+  }
 
-  updateForm = async (request: FastifyRequest, reply: FastifyReply) => {
+  async list(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { id } = request.params as any;
-      const data = request.body as any;
+      const user = request.user as any;
+      const organizationId = user.organizationId;
+      const { groupId } = request.query as any;
 
-      const form = await this.service.updateForm(id, data);
-      return reply.send({ success: true, form });
+      const visaForms = await visaFormsService.listVisaForms(organizationId, groupId);
+
+      reply.send({
+        success: true,
+        data: visaForms,
+        count: visaForms.length
+      });
     } catch (error: any) {
-      return reply.status(500).send({ success: false, error: error.message });
+      reply.code(400).send({
+        success: false,
+        error: error.message
+      });
     }
-  };
+  }
 
-  submitForm = async (request: FastifyRequest, reply: FastifyReply) => {
+  async update(request: FastifyRequest, reply: FastifyReply) {
     try {
+      const user = request.user as any;
+      const organizationId = user.organizationId;
       const { id } = request.params as any;
-      const form = await this.service.submitForm(id);
 
-      return reply.send({ success: true, form });
+      const visaForm = await visaFormsService.updateVisaForm(
+        id,
+        request.body,
+        organizationId
+      );
+
+      reply.send({
+        success: true,
+        data: visaForm,
+        message: 'Visa form updated successfully'
+      });
     } catch (error: any) {
-      return reply.status(500).send({ success: false, error: error.message });
+      reply.code(400).send({
+        success: false,
+        error: error.message
+      });
     }
-  };
+  }
 
-  deleteForm = async (request: FastifyRequest, reply: FastifyReply) => {
+  async submit(request: FastifyRequest, reply: FastifyReply) {
     try {
+      const user = request.user as any;
+      const organizationId = user.organizationId;
       const { id } = request.params as any;
-      await this.service.deleteForm(id);
 
-      return reply.send({ success: true });
+      const visaForm = await visaFormsService.submitVisaForm(id, organizationId);
+
+      reply.send({
+        success: true,
+        data: visaForm,
+        message: 'Visa form submitted successfully'
+      });
     } catch (error: any) {
-      return reply.status(500).send({ success: false, error: error.message });
+      reply.code(400).send({
+        success: false,
+        error: error.message
+      });
     }
-  };
+  }
+
+  async delete(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const user = request.user as any;
+      const organizationId = user.organizationId;
+      const { id } = request.params as any;
+
+      await visaFormsService.deleteVisaForm(id, organizationId);
+
+      reply.send({
+        success: true,
+        message: 'Visa form deleted successfully'
+      });
+    } catch (error: any) {
+      reply.code(400).send({
+        success: false,
+        error: error.message
+      });
+    }
+  }
 }
+
+export const visaFormsController = new VisaFormsController();

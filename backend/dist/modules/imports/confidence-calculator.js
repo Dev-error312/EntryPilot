@@ -90,24 +90,29 @@ class ConfidenceCalculator {
         if (!field)
             return true;
         const stringValue = String(value).trim();
+        const fieldType = field.type;
         // Format validation
-        if (field.format && field.type === 'string') {
+        if (field.format && fieldType === 'string') {
             const regex = this.getFormatRegex(field.format);
             if (regex && !regex.test(stringValue)) {
                 return false;
             }
         }
         // Type validation
-        switch (field.type) {
+        switch (fieldType) {
             case 'date':
                 return this.isValidDate(stringValue);
             case 'email':
                 return this.isValidEmail(stringValue);
             case 'phone':
+            case 'tel':
                 return this.isValidPhone(stringValue);
             case 'number':
                 return !isNaN(parseFloat(stringValue));
             case 'string':
+            case 'text':
+            case 'textarea':
+            case 'select':
                 return stringValue.length > 0;
             default:
                 return true;

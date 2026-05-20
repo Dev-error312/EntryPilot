@@ -53,6 +53,16 @@ async function bootstrap() {
   server.decorate('authenticate', authMiddleware);
   server.decorate('tenantGuard', tenantMiddleware);
 
+  // Root route
+  server.get('/', async () => {
+    return {
+      name: 'EntryPilot API',
+      version: '1.0.0',
+      status: 'running',
+      timestamp: new Date().toISOString()
+    };
+  });
+
   // Health check
   server.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };
