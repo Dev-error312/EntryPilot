@@ -155,7 +155,7 @@ export class ApplicantController {
         if (isDuplicate) {
           return reply.status(409).send({
             error: 'Conflict',
-            message: 'Passport number already exists in your organization'
+            message: `An applicant with passport number "${body.passportNumber}" already exists in your organization`
           });
         }
       }
@@ -613,7 +613,7 @@ export class ApplicantController {
         if (isDuplicate) {
           return reply.status(409).send({
             error: 'Conflict',
-            message: 'Passport number already exists in your organization'
+            message: `An applicant with passport number "${body.passportNumber}" already exists in your organization`
           });
         }
       }

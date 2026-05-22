@@ -512,6 +512,7 @@ function CreateApplicantModal({
                 <VisaApplicationForm
                   inline
                   initialData={{ groupId: defaultGroupId || '' }}
+                  groups={groups}
                   onSubmit={async (uploadFormData) => {
                     await handleVisaSubmit(uploadFormData);
                   }}

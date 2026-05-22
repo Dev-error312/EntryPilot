@@ -9,6 +9,11 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+type GroupOption = {
+  id: string;
+  code: string;
+  name: string;
+};
 
 interface VisaFormData {
   // Documents
@@ -116,7 +121,17 @@ const SECTIONS = [
   'travelHistory'
 ];
 
-export default function VisaApplicationForm({ initialData, inline = false, onSubmit }: { initialData?: Partial<VisaFormData>; inline?: boolean; onSubmit?: (uploadFormData: FormData) => Promise<any> }) {
+export default function VisaApplicationForm({
+    initialData,
+    inline = false,
+    groups,
+    onSubmit,
+  }: {
+    initialData?: Partial<VisaFormData>;
+    inline?: boolean;
+    groups?: GroupOption[];
+    onSubmit?: (uploadFormData: FormData) => Promise<any>;
+  }) {
   const router = useRouter();
   const { user } = useAuthStore();
   const organization = user?.organization;
@@ -264,6 +279,35 @@ export default function VisaApplicationForm({ initialData, inline = false, onSub
   const handleRemoveChild = (index: number) => {
     const children = JSON.parse(formData.children || '[]');
     children.splice(index, 1);
+      const validateForm = (): string[] => {
+        const errors: string[] = [];
+
+        if (!formData.visaPhoto) errors.push('Visa Photo is required');
+        if (!formData.passportPage1?.length) errors.push('Passport Blank Page 01 is required');
+        if (!formData.passportPage2?.length) errors.push('Passport Blank Page 02 is required');
+        if (!formData.passportBackPage?.length) errors.push('Passport Back Page is required');
+        if (!formData.fullName.trim()) errors.push('Full Name is required');
+        if (!formData.placeOfBirthCountry.trim()) errors.push('Place of Birth Country is required');
+        if (!formData.maritalStatus.trim()) errors.push('Marital Status is required');
+        if (!formData.currentOccupation.trim()) errors.push('Current Occupation is required');
+        if (!formData.residenceCountry.trim()) errors.push('Country / Region is required');
+        if (!formData.residenceMobilePhone.trim()) errors.push('Mobile Phone is required');
+        if (!formData.residenceEmail.trim()) errors.push('Email is required');
+        if (!formData.emergencyFirstName.trim()) errors.push('Emergency Contact First Name is required');
+        if (!formData.emergencyLastName.trim()) errors.push('Emergency Contact Last Name is required');
+        if (!formData.emergencyRelationship.trim()) errors.push('Emergency Contact Relationship is required');
+        if (!formData.emergencyPhone.trim()) errors.push('Emergency Contact Phone is required');
+
+        if (groups?.length && !formData.groupId.trim()) {
+          errors.push('Group selection is required');
+        }
+
+        if (formData.residenceEmail && !/^\S+@\S+\.\S+$/.test(formData.residenceEmail)) {
+          errors.push('Email format is invalid');
+        }
+
+        return errors;
+      };
     setFormData(prev => ({
       ...prev,
       children: JSON.stringify(children)
@@ -377,6 +421,25 @@ export default function VisaApplicationForm({ initialData, inline = false, onSub
           <h1 className="text-4xl font-bold text-gray-900 mb-2">China Visa Application</h1>
           <p className="text-gray-600">Complete all required fields marked with *</p>
         </div>
+        {groups?.length ? (
+          <div className="mb-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <label className="block text-lg font-semibold text-gray-900 mb-3">
+              Select Group <span className="text-red-600">*</span>
+            </label>
+            <select
+              value={formData.groupId}
+              onChange={(e) => handleInputChange('groupId', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            >
+              <option value="">-- Select a Group --</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.code} - {group.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
 
         {/* Progress Indicator */}
         <div className="mb-8">
@@ -404,6 +467,15 @@ export default function VisaApplicationForm({ initialData, inline = false, onSub
         {success && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
             <p className="text-green-800 font-medium">Form submitted successfully! Redirecting...</p>
+                  {loading && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                      <div className="rounded-xl bg-white px-8 py-6 shadow-xl text-center">
+                        <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+                        <p className="font-medium text-gray-900">Submitting form...</p>
+                        <p className="mt-1 text-sm text-gray-500">Please wait while your application is saved.</p>
+                      </div>
+                    </div>
+                  )}
           </div>
         )}
 
