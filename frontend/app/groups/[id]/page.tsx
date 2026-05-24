@@ -18,6 +18,21 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { groupsApi, applicantsApi } from '@/lib/api';
 import { format } from 'date-fns';
 
+function safeFormatDate(dateString: string | null | undefined): string {
+  if (!dateString) return 'N/A';
+
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
+    return format(date, 'MMM d, yyyy');
+  } catch (error) {
+    console.warn('Date formatting error:', dateString, error);
+    return 'N/A';
+  }
+}
+
 interface Group {
   id: string;
   code: string;
@@ -190,7 +205,7 @@ export default function GroupDetailPage() {
                   Travel Date
                 </label>
                 <p className="text-lg text-gray-900">
-                  {format(new Date(group.travelDate), 'MMM d, yyyy')}
+                  {safeFormatDate(group.travelDate)}
                 </p>
               </div>
             )}
@@ -251,7 +266,7 @@ export default function GroupDetailPage() {
                 Created
               </label>
               <p className="text-gray-900">
-                {format(new Date(group.createdAt), 'MMM d, yyyy')}
+                {safeFormatDate(group.createdAt)}
               </p>
             </div>
           </div>
@@ -267,7 +282,7 @@ export default function GroupDetailPage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
               <Users className="w-4 h-4" />
-              Applicants ({group._count.applicants})
+              Applicants ({group._count?.applicants || 0})
             </h2>
             <button className="btn-primary">
               + Add Applicant
