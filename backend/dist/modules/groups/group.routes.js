@@ -10,6 +10,18 @@ async function groupRoutes(server) {
     server.get('/', {
         preHandler: [server.authenticate, server.tenantGuard]
     }, controller.list);
+    // Get group by code (optimized lookup)
+    server.get('/code/:code', {
+        preHandler: [server.authenticate, server.tenantGuard]
+    }, async (request, reply) => {
+        return controller.getByCode(request, reply);
+    });
+    // Get applicants by group (lazy load with pagination)
+    server.get('/:id/applicants', {
+        preHandler: [server.authenticate, server.tenantGuard]
+    }, async (request, reply) => {
+        return controller.getGroupApplicants(request, reply);
+    });
     server.get('/active', {
         preHandler: [server.authenticate, server.tenantGuard]
     }, controller.listActive);

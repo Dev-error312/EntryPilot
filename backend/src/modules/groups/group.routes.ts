@@ -12,6 +12,20 @@ export async function groupRoutes(server: FastifyInstance) {
     preHandler: [server.authenticate, server.tenantGuard]
   }, controller.list);
 
+  // Get group by code (optimized lookup)
+  server.get('/code/:code', {
+    preHandler: [server.authenticate, server.tenantGuard]
+  }, async (request, reply) => {
+    return controller.getByCode(request as any, reply as any);
+  });
+
+  // Get applicants by group (lazy load with pagination)
+  server.get('/:id/applicants', {
+    preHandler: [server.authenticate, server.tenantGuard]
+  }, async (request, reply) => {
+    return controller.getGroupApplicants(request as any, reply as any);
+  });
+
   server.get('/active', {
     preHandler: [server.authenticate, server.tenantGuard]
   }, controller.listActive);

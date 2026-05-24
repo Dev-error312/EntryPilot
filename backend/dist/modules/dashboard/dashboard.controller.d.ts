@@ -3,6 +3,8 @@ export declare class DashboardController {
     private server;
     constructor(server: FastifyInstance);
     getStats: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
+    getStatsByPeriod: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
+    getProcessingMetrics: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
     getRecent: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
     getChartData: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;
     getSuperAdminStats: (request: FastifyRequest, reply: FastifyReply) => Promise<never>;

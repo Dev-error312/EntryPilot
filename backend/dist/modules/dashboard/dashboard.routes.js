@@ -7,6 +7,16 @@ async function dashboardRoutes(server) {
     server.get('/stats', {
         preHandler: [server.authenticate, server.tenantGuard]
     }, controller.getStats);
+    server.get('/stats/period', {
+        preHandler: [server.authenticate, server.tenantGuard]
+    }, async (request, reply) => {
+        return controller.getStatsByPeriod(request, reply);
+    });
+    server.get('/metrics/processing', {
+        preHandler: [server.authenticate, server.tenantGuard]
+    }, async (request, reply) => {
+        return controller.getProcessingMetrics(request, reply);
+    });
     server.get('/recent', {
         preHandler: [server.authenticate, server.tenantGuard]
     }, controller.getRecent);
