@@ -132,14 +132,27 @@ export default function ImportPage() {
 
   const loadData = async () => {
     try {
+      setLoading(true);
+      setError('');
+
       const [importsRes, groupsRes] = await Promise.all([
         importsApi.list(),
         groupsApi.listActive(),
       ]);
-      setImports(importsRes.data.data);
-      setGroups(groupsRes.data);
+      setImports(importsRes.data?.data || []);
+
+      const groupsArray = groupsRes?.data?.data || groupsRes?.data || [];
+      if (Array.isArray(groupsArray)) {
+        setGroups(groupsArray);
+      } else {
+        console.warn('Unexpected groups response format:', groupsRes);
+        setGroups([]);
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
+      setError('Failed to load imports and groups');
+      setImports([]);
+      setGroups([]);
     } finally {
       setLoading(false);
     }
@@ -337,13 +350,24 @@ export default function ImportPage() {
         {/* Group Selection */}
         <div className="card p-6">
           <h3 className="text-sm font-medium text-gray-700 mb-2">Assign to Group (Optional)</h3>
-          <select value={selectedGroup} onChange={(e) => setSelectedGroup(e.target.value)} className="input max-w-md">
-            <option value="">Select a group to auto-create applicants</option>
-            {groups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.code} - {group.name}
-              </option>
-            ))}
+          <select
+            value={selectedGroup}
+            onChange={(e) => setSelectedGroup(e.target.value)}
+            className="input max-w-md"
+            disabled={loading || !Array.isArray(groups)}
+          >
+            <option value="">
+              {loading ? 'Loading groups...' : 'Select a group to auto-create applicants'}
+            </option>
+            {Array.isArray(groups) && groups.length > 0 ? (
+              groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.code} - {group.name}
+                </option>
+              ))
+            ) : (
+              !loading && <option disabled>No groups available</option>
+            )}
           </select>
           <p className="text-xs text-gray-500 mt-1">
             If selected, applicants will be automatically created from the imported data
